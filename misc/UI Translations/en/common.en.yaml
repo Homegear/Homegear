@@ -3,6 +3,7 @@
 l10n.common.serviceMessage.unreach: 'Device is offline'
 l10n.common.serviceMessage.stickyUnreach: 'Device was offline'
 l10n.common.serviceMessage.configPending: 'Device has pending configuration'
+l10n.common.serviceMessage.emergency_operation: "The device is in emergency operation"
 l10n.common.serviceMessage.lowbat: "The device's battery is nearly empty"
 l10n.common.serviceMessage.alarm: "The device's alarm was triggered"
 l10n.common.serviceMessage.collective_alarm: "The device's collective alarm was triggered"

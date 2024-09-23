@@ -278,6 +278,12 @@ class NodeBlueClient : public BaseLib::IQueue {
   Flows::PVariable lifetick(Flows::PArray &parameters);
 
   /**
+   * Returns load metrics.
+   * @param parameters Irrelevant for this method.
+   */
+  Flows::PVariable getLoad(Flows::PArray &parameters);
+
+  /**
    * Starts a new flow.
    * @param parameters
    */
@@ -335,6 +341,8 @@ class NodeBlueClient : public BaseLib::IQueue {
   Flows::PVariable executePhpNodeBaseMethod(Flows::PArray &parameters);
 
   Flows::PVariable getNodesWithFixedInputs(Flows::PArray &parameters);
+
+  Flows::PVariable getNodeProcessingTimes(Flows::PArray &parameters);
 
   Flows::PVariable getNodeVariable(Flows::PArray &parameters);
 

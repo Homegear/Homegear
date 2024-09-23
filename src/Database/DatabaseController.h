@@ -394,10 +394,14 @@ class DatabaseController : public BaseLib::Database::IDatabaseController, public
 
   bool peerExists(uint64_t peerId) override;
 
+  bool peerExists(const std::string &serial_number) override;
+
   /**
    * {@inheritDoc}
    */
   bool setPeerID(uint64_t oldPeerID, uint64_t newPeerID) override;
+
+  bool setPeerSerialNumber(uint64_t peer_id, const std::string &serial_number) override;
   // }}}
 
   // {{{ Service messages

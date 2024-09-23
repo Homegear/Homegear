@@ -43,8 +43,8 @@
 #if PHP_VERSION_ID < 70100
 #error "PHP 7.2 is required as ZTS in versions 7.0 and 7.1 is broken."
 #endif
-#if PHP_VERSION_ID >= 80200
-#error "PHP 8.2 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
+#if PHP_VERSION_ID >= 80300
+#error "PHP 8.3 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
  * 2. Check if content of marked part in hg_stream_open() equals zend_stream_open() in zend_stream.c
@@ -55,11 +55,11 @@
  */
 #endif
 
-static bool _disposed = true;
-static zend_homegear_superglobals _superglobals;
-static std::mutex _scriptCacheMutex;
-static std::map<std::string, std::shared_ptr<Homegear::ScriptEngine::CacheInfo>> _scriptCache;
-static std::mutex _envMutex;
+static bool disposed_ = false;
+static zend_homegear_superglobals super_globals_;
+static std::mutex script_cache_mutex_;
+static std::map<std::string, std::shared_ptr<Homegear::ScriptEngine::CacheInfo>> script_cache_;
+static std::mutex env_mutex_;
 
 static zend_class_entry *homegear_class_entry = nullptr;
 static zend_class_entry *homegear_gpio_class_entry = nullptr;
@@ -104,6 +104,9 @@ static PHP_MINFO_FUNCTION(homegear);
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(print_v_arg_info, 0, 1, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(print_v);
+ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_generate_webssh_token_arg_info, 0, 0, IS_STRING, 0)
+ZEND_END_ARG_INFO()
+ZEND_FUNCTION(hg_generate_webssh_token);
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_get_script_id_arg_info, 0, 0, IS_STRING, 0)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_get_script_id);
@@ -155,7 +158,7 @@ ZEND_FUNCTION(hg_log);
 ZEND_BEGIN_ARG_INFO_EX(hg_set_language_arg_info, nullptr, 0, 1)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_set_language);
-ZEND_BEGIN_ARG_INFO_EX(hg_set_script_log_level_arg_info,  nullptr,0, 1)
+ZEND_BEGIN_ARG_INFO_EX(hg_set_script_log_level_arg_info, nullptr, 0, 1)
 ZEND_END_ARG_INFO()
 ZEND_FUNCTION(hg_set_script_log_level);
 ZEND_BEGIN_ARG_WITH_RETURN_TYPE_INFO_EX(hg_get_http_contents_arg_info, 0, 5, IS_STRING, 0)
@@ -270,6 +273,7 @@ ZEND_FUNCTION(hg_putenv);
 
 static const zend_function_entry homegear_functions[] = {
     ZEND_FE(print_v, print_v_arg_info)
+    ZEND_FE(hg_generate_webssh_token, hg_generate_webssh_token_arg_info)
     ZEND_FE(hg_get_script_id, hg_get_script_id_arg_info)
     ZEND_FE(hg_register_thread, hg_register_thread_arg_info)
     ZEND_FE(hg_list_modules, hg_list_modules_arg_info)
@@ -351,8 +355,8 @@ static zend_module_entry homegear_module_entry = {
 };
 
 static sapi_module_struct php_homegear_sapi_module = {
-    (char *)"homegear",                       /* name */
-    (char *)"PHP Homegear Library",        /* pretty name */
+    (char *) "homegear",                       /* name */
+    (char *) "PHP Homegear Library",        /* pretty name */
 
     php_homegear_startup,              /* startup == MINIT. Called for each new thread. */
     php_homegear_shutdown,             /* shutdown == MSHUTDOWN. Called for each new thread. */
@@ -383,11 +387,11 @@ static sapi_module_struct php_homegear_sapi_module = {
 };
 
 void pthread_data_destructor(void *data) {
-  if (data) delete (zend_homegear_globals *)data;
+  if (data) delete (zend_homegear_globals *) data;
 }
 
 void php_homegear_build_argv(std::vector<std::string> &arguments) {
-  if (_disposed) return;
+  if (disposed_) return;
   zval argc;
   zval argv;
   array_init(&argv);
@@ -414,7 +418,7 @@ void php_homegear_build_argv(std::vector<std::string> &arguments) {
 ssize_t hg_zend_stream_reader(void *handle, char *buf, size_t len) {
   if (!handle) return 0;
 
-  auto hg_stream = (hg_stream_handle *)handle;
+  auto hg_stream = (hg_stream_handle *) handle;
 
   size_t bytesToReturn = hg_stream->position + len > hg_stream->buffer.size() ? hg_stream->buffer.size() - hg_stream->position : len;
   std::copy(hg_stream->buffer.data() + hg_stream->position, hg_stream->buffer.data() + hg_stream->position + bytesToReturn, buf);
@@ -427,24 +431,30 @@ ssize_t hg_zend_stream_reader(void *handle, char *buf, size_t len) {
 size_t hg_zend_stream_fsizer(void *handle) {
   if (!handle) return 0;
 
-  return ((hg_stream_handle *)handle)->buffer.size();
+  return ((hg_stream_handle *) handle)->buffer.size();
 }
 
 void hg_zend_stream_closer(void *handle) {
-  if (handle) delete (hg_stream_handle *)handle;
+  if (handle) delete (hg_stream_handle *) handle;
 }
 #endif
 
-#if PHP_VERSION_ID >= 80000
+#if PHP_VERSION_ID < 80000
+int hg_stream_open(const char *filename, zend_file_handle *handle) {
+#elif PHP_VERSION_ID < 80200
 zend_result hg_stream_open(const char *filename, zend_file_handle *handle) {
 #else
-int hg_stream_open(const char *filename, zend_file_handle *handle) {
+zend_result hg_stream_open(zend_file_handle *handle) {
 #endif
+#if PHP_VERSION_ID < 80200
   std::string file(filename);
+#else
+  std::string file(handle->filename->val, handle->filename->len);
+#endif
   if (file.size() > 3 && (file.compare(file.size() - 4, 4, ".hgs") == 0 || file.compare(file.size() - 4, 4, ".hgn") == 0)) {
-    std::lock_guard<std::mutex> scriptCacheGuard(_scriptCacheMutex);
-    std::map<std::string, std::shared_ptr<Homegear::ScriptEngine::CacheInfo>>::iterator scriptIterator = _scriptCache.find(file);
-    if (scriptIterator != _scriptCache.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(file)) {
+    std::lock_guard<std::mutex> scriptCacheGuard(script_cache_mutex_);
+    auto scriptIterator = script_cache_.find(file);
+    if (scriptIterator != script_cache_.end() && scriptIterator->second->lastModified == BaseLib::Io::getFileLastModifiedTime(file)) {
 #if PHP_VERSION_ID < 70400
       zend_homegear_globals* globals = php_homegear_get_globals();
       globals->additionalStrings.push_front(scriptIterator->second->script);
@@ -463,9 +473,7 @@ int hg_stream_open(const char *filename, zend_file_handle *handle) {
       stream->position = 0;
       stream->buffer = scriptIterator->second->script;
 
-      memset(handle, 0, sizeof(zend_file_handle));
       handle->type = ZEND_HANDLE_STREAM;
-      handle->filename = filename;
       handle->opened_path = nullptr; //It might make sense to set this.
       handle->handle.stream.handle = stream;
       handle->handle.stream.reader = hg_zend_stream_reader;
@@ -479,7 +487,7 @@ int hg_stream_open(const char *filename, zend_file_handle *handle) {
       int32_t pos = -1;
       for (uint32_t i = 0; i < 11 && i < data.size(); i++) {
         if (data[i] == ' ') {
-          pos = (int32_t)i;
+          pos = (int32_t) i;
           break;
         }
       }
@@ -489,9 +497,9 @@ int hg_stream_open(const char *filename, zend_file_handle *handle) {
       }
       std::string moduleIdString(&data.at(0), static_cast<unsigned long>(pos));
       int32_t moduleId = BaseLib::Math::getNumber(moduleIdString);
-      std::vector<char> input(&data.at(static_cast<unsigned long>(pos + 1)), &data.at(data.size() - 1) + 1);
+      std::vector<char> input(data.data() + pos + 1, data.data() + data.size());
       if (input.empty()) return FAILURE;
-      std::map<int32_t, std::unique_ptr<BaseLib::Licensing::Licensing>>::iterator i = Homegear::GD::licensingModules.find(moduleId);
+      auto i = Homegear::GD::licensingModules.find(moduleId);
       if (i == Homegear::GD::licensingModules.end() || !i->second) {
         Homegear::GD::out.printError("Error: Could not decrypt script file. Licensing module with id 0x" + BaseLib::HelperFunctions::getHexString(moduleId) + " not found");
         return FAILURE;
@@ -519,9 +527,7 @@ int hg_stream_open(const char *filename, zend_file_handle *handle) {
         stream->position = 0;
         stream->buffer = cacheInfo->script;
 
-        memset(handle, 0, sizeof(zend_file_handle));
         handle->type = ZEND_HANDLE_STREAM;
-        handle->filename = filename;
         handle->opened_path = nullptr; //It might make sense to set this.
         handle->handle.stream.handle = stream;
         handle->handle.stream.reader = hg_zend_stream_reader;
@@ -543,13 +549,19 @@ int hg_stream_open(const char *filename, zend_file_handle *handle) {
     memset(&handle->handle.stream.mmap, 0, sizeof(zend_mmap));
 #else
     zend_string *opened_path = nullptr;
-    auto fp = zend_fopen(filename, &opened_path);
-    //Don't continue when fp is invalid, i. e. the file could not be opened. This differs from zend_stream_open. But
+    auto fp = zend_fopen(handle->filename, &opened_path);
+    //Don't continue when fp is invalid, i.e. the file could not be opened. This differs from zend_stream_open. But
     //when calling zend_stream_init_fp() after returning, PHP crashes with a SEGFAULT on "include" of a non-existing
     //file.
     if (!fp) return FAILURE;
+#if PHP_VERSION_ID < 80200
     zend_stream_init_fp(handle, fp, filename);
     handle->opened_path = opened_path;
+#else
+    handle->type = ZEND_HANDLE_FP;
+    handle->handle.fp = fp;
+    handle->opened_path = opened_path;
+#endif
 #endif
     //}}}
   }
@@ -558,7 +570,7 @@ int hg_stream_open(const char *filename, zend_file_handle *handle) {
 }
 
 static size_t php_homegear_read_post(char *buf, size_t count_bytes) {
-  if (_disposed || SEG(commandLine)) return 0;
+  if (disposed_ || SEG(commandLine)) return 0;
   BaseLib::Http *http = &SEG(http);
   if (!http || http->getContentSize() == 0) return 0;
   size_t bytesRead = http->readContentStream(buf, count_bytes);
@@ -567,19 +579,19 @@ static size_t php_homegear_read_post(char *buf, size_t count_bytes) {
 }
 
 static char *php_homegear_read_cookies() {
-  if (_disposed || SEG(commandLine)) return 0;
+  if (disposed_ || SEG(commandLine)) return 0;
   BaseLib::Http *http = &SEG(http);
   if (!http) return 0;
   if (!SEG(cookiesParsed)) {
     SEG(cookiesParsed) = true;
     //Conversion from (const char*) to (char*) is ok, because PHP makes a copy before parsing and does not change the original data.
-    if (!http->getHeader().cookie.empty()) return (char *)http->getHeader().cookie.c_str();
+    if (!http->getHeader().cookie.empty()) return (char *) http->getHeader().cookie.c_str();
   }
   return nullptr;
 }
 
 static size_t php_homegear_ub_write_string(std::string &string) {
-  if (string.empty() || _disposed) return 0;
+  if (string.empty() || disposed_) return 0;
   if (SEG(outputCallback)) SEG(outputCallback)(string, false);
   else {
     if (string.size() > 2 && string.at(string.size() - 1) == '\n') {
@@ -593,7 +605,7 @@ static size_t php_homegear_ub_write_string(std::string &string) {
 }
 
 static size_t php_homegear_ub_write(const char *str, size_t length) {
-  if (length == 0 || _disposed) return 0;
+  if (length == 0 || disposed_) return 0;
   if (SEG(outputCallback)) {
     std::string output(str, length);
     SEG(outputCallback)(output, false);
@@ -614,14 +626,14 @@ static void php_homegear_flush(void *server_context) {
 }
 
 static int php_homegear_send_headers(sapi_headers_struct *sapi_headers) {
-  if (_disposed || SEG(commandLine)) return SAPI_HEADER_SENT_SUCCESSFULLY;
+  if (disposed_ || SEG(commandLine)) return SAPI_HEADER_SENT_SUCCESSFULLY;
   if (!sapi_headers || !SEG(sendHeadersCallback)) return SAPI_HEADER_SEND_FAILED;
   BaseLib::PVariable headers(new BaseLib::Variable(BaseLib::VariableType::tStruct));
   if (!SEG(webRequest)) return SAPI_HEADER_SENT_SUCCESSFULLY;
   headers->structValue->emplace("RESPONSE_CODE", std::make_shared<BaseLib::Variable>(sapi_headers->http_response_code));
   zend_llist_element *element = sapi_headers->headers.head;
   while (element) {
-    sapi_header_struct *header = (sapi_header_struct *)element->data;
+    sapi_header_struct *header = (sapi_header_struct *) element->data;
     std::string temp(header->header, header->header_len);
     //PHP returns this sometimes
     if (temp.compare(0, 22, "Content-type: ext/html") == 0) {
@@ -698,7 +710,7 @@ static void php_homegear_log_message(char *message, int syslog_type_int)
 static void php_homegear_log_message(char* message)
 #endif
 {
-  if (_disposed) return;
+  if (disposed_) return;
   std::string additionalInfo;
   if (SG(request_info).path_translated) additionalInfo += std::string(SG(request_info).path_translated);
   if (!SEG(nodeId).empty()) additionalInfo += (additionalInfo.empty() ? "" : ", ") + SEG(nodeId);
@@ -710,13 +722,13 @@ static void php_homegear_log_message(char* message)
 }
 
 static void php_homegear_register_variables(zval *track_vars_array) {
-  if (_disposed) return;
+  if (disposed_) return;
   if (SEG(commandLine)) {
     if (SG(request_info).path_translated) {
-      php_register_variable((char *)"PHP_SELF", (char *)SG(request_info).path_translated, track_vars_array);
-      php_register_variable((char *)"SCRIPT_NAME", (char *)SG(request_info).path_translated, track_vars_array);
-      php_register_variable((char *)"SCRIPT_FILENAME", (char *)SG(request_info).path_translated, track_vars_array);
-      php_register_variable((char *)"PATH_TRANSLATED", (char *)SG(request_info).path_translated, track_vars_array);
+      php_register_variable((char *) "PHP_SELF", (char *) SG(request_info).path_translated, track_vars_array);
+      php_register_variable((char *) "SCRIPT_NAME", (char *) SG(request_info).path_translated, track_vars_array);
+      php_register_variable((char *) "SCRIPT_FILENAME", (char *) SG(request_info).path_translated, track_vars_array);
+      php_register_variable((char *) "PATH_TRANSLATED", (char *) SG(request_info).path_translated, track_vars_array);
     }
     php_import_environment_variables(track_vars_array);
   } else {
@@ -724,82 +736,88 @@ static void php_homegear_register_variables(zval *track_vars_array) {
     BaseLib::ScriptEngine::PScriptInfo &scriptInfo = SEG(scriptInfo);
     if (!http || !scriptInfo) return;
     const BaseLib::Http::Header &header = http->getHeader();
-    BaseLib::Rpc::ServerInfo::Info *server = (BaseLib::Rpc::ServerInfo::Info *)SG(server_context);
+    BaseLib::Rpc::ServerInfo::Info *server = (BaseLib::Rpc::ServerInfo::Info *) SG(server_context);
     zval value;
 
     //PHP makes copies of all values, so conversion from const to non-const is ok.
     if (server) {
-      if (server->ssl) php_register_variable_safe((char *)"HTTPS", (char *)"on", 2, track_vars_array);
-      else php_register_variable_safe((char *)"HTTPS", (char *)"", 0, track_vars_array);
+      if (server->ssl) php_register_variable_safe((char *) "HTTPS", (char *) "on", 2, track_vars_array);
+      else php_register_variable_safe((char *) "HTTPS", (char *) "", 0, track_vars_array);
       std::string connection = (header.connection & BaseLib::Http::Connection::keepAlive) ? "keep-alive" : "close";
-      php_register_variable_safe((char *)"HTTP_CONNECTION", (char *)connection.c_str(), connection.size(), track_vars_array);
-      php_register_variable_safe((char *)"DOCUMENT_ROOT", (char *)scriptInfo->contentPath.c_str(), scriptInfo->contentPath.size(), track_vars_array);
-      php_register_variable_safe((char *)"SCRIPT_FILENAME", (char *)scriptInfo->fullPath.c_str(), scriptInfo->fullPath.size(), track_vars_array);
-      php_register_variable_safe((char *)"SERVER_NAME", (char *)server->name.c_str(), server->name.size(), track_vars_array);
-      php_register_variable_safe((char *)"SERVER_ADDR", (char *)server->address.c_str(), server->address.size(), track_vars_array);
+      php_register_variable_safe((char *) "HTTP_CONNECTION", (char *) connection.c_str(), connection.size(), track_vars_array);
+      php_register_variable_safe((char *) "DOCUMENT_ROOT", (char *) scriptInfo->contentPath.c_str(), scriptInfo->contentPath.size(), track_vars_array);
+      php_register_variable_safe((char *) "SCRIPT_FILENAME", (char *) scriptInfo->fullPath.c_str(), scriptInfo->fullPath.size(), track_vars_array);
+      php_register_variable_safe((char *) "SERVER_NAME", (char *) server->name.c_str(), server->name.size(), track_vars_array);
+      php_register_variable_safe((char *) "SERVER_ADDR", (char *) server->address.c_str(), server->address.size(), track_vars_array);
       ZVAL_LONG(&value, server->port);
-      php_register_variable_ex((char *)"SERVER_PORT", &value, track_vars_array);
-      if (server->webSocket) php_register_variable_safe((char *)"WEBSOCKET_ENABLED", (char *)"true", 4, track_vars_array);
-      else php_register_variable_safe((char *)"WEBSOCKET_ENABLED", (char *)"false", 5, track_vars_array);
-      if (server->restServer) php_register_variable_safe((char *)"REST_ENABLED", (char *)"true", 4, track_vars_array);
-      else php_register_variable_safe((char *)"REST_ENABLED", (char *)"false", 5, track_vars_array);
-      if (server->rpcServer) php_register_variable_safe((char *)"RPC_ENABLED", (char *)"true", 4, track_vars_array);
-      else php_register_variable_safe((char *)"RPC_ENABLED", (char *)"false", 5, track_vars_array);
+      php_register_variable_ex((char *) "SERVER_PORT", &value, track_vars_array);
+      if (server->webSocket) php_register_variable_safe((char *) "WEBSOCKET_ENABLED", (char *) "true", 4, track_vars_array);
+      else php_register_variable_safe((char *) "WEBSOCKET_ENABLED", (char *) "false", 5, track_vars_array);
+      if (server->restServer) php_register_variable_safe((char *) "REST_ENABLED", (char *) "true", 4, track_vars_array);
+      else php_register_variable_safe((char *) "REST_ENABLED", (char *) "false", 5, track_vars_array);
+      if (server->rpcServer) php_register_variable_safe((char *) "RPC_ENABLED", (char *) "true", 4, track_vars_array);
+      else php_register_variable_safe((char *) "RPC_ENABLED", (char *) "false", 5, track_vars_array);
       std::string authType = (server->authType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic) ? "basic" : "none";
-      php_register_variable_safe((char *)"AUTH_TYPE", (char *)authType.c_str(), authType.size(), track_vars_array);
-      std::string webSocketAuthType = (server->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic) ? "basic" : ((server->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session) ? "session" : "none");
-      php_register_variable_safe((char *)"WEBSOCKET_AUTH_TYPE", (char *)webSocketAuthType.c_str(), webSocketAuthType.size(), track_vars_array);
+      php_register_variable_safe((char *) "AUTH_TYPE", (char *) authType.c_str(), authType.size(), track_vars_array);
+      std::string webSocketAuthType =
+          (server->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::basic) ? "basic" : ((server->websocketAuthType == BaseLib::Rpc::ServerInfo::Info::AuthType::session) ? "session"
+                                                                                                                                                                                       : "none");
+      php_register_variable_safe((char *) "WEBSOCKET_AUTH_TYPE", (char *) webSocketAuthType.c_str(), webSocketAuthType.size(), track_vars_array);
     }
 
     std::string version = std::string("Homegear ") + Homegear::GD::baseLibVersion;
-    php_register_variable_safe((char *)"SERVER_SOFTWARE", (char *)version.c_str(), version.size(), track_vars_array);
-    php_register_variable_safe((char *)"SCRIPT_NAME", (char *)scriptInfo->relativePath.c_str(), scriptInfo->relativePath.size(), track_vars_array);
+    php_register_variable_safe((char *) "SERVER_SOFTWARE", (char *) version.c_str(), version.size(), track_vars_array);
+    php_register_variable_safe((char *) "SCRIPT_NAME", (char *) scriptInfo->relativePath.c_str(), scriptInfo->relativePath.size(), track_vars_array);
     std::string phpSelf = scriptInfo->relativePath + header.pathInfo;
-    php_register_variable_safe((char *)"PHP_SELF", (char *)phpSelf.c_str(), phpSelf.size(), track_vars_array);
+    php_register_variable_safe((char *) "PHP_SELF", (char *) phpSelf.c_str(), phpSelf.size(), track_vars_array);
     if (!header.pathInfo.empty()) {
-      php_register_variable_safe((char *)"PATH_INFO", (char *)header.pathInfo.c_str(), header.pathInfo.size(), track_vars_array);
-      if (SG(request_info).path_translated) php_register_variable((char *)"PATH_TRANSLATED", (char *)SG(request_info).path_translated, track_vars_array);
+      php_register_variable_safe((char *) "PATH_INFO", (char *) header.pathInfo.c_str(), header.pathInfo.size(), track_vars_array);
+      if (SG(request_info).path_translated) php_register_variable((char *) "PATH_TRANSLATED", (char *) SG(request_info).path_translated, track_vars_array);
     }
-    php_register_variable_safe((char *)"HTTP_HOST", (char *)header.host.c_str(), header.host.size(), track_vars_array);
-    php_register_variable_safe((char *)"QUERY_STRING", (char *)header.args.c_str(), header.args.size(), track_vars_array);
+    php_register_variable_safe((char *) "HTTP_HOST", (char *) header.host.c_str(), header.host.size(), track_vars_array);
+    php_register_variable_safe((char *) "QUERY_STRING", (char *) header.args.c_str(), header.args.size(), track_vars_array);
     std::string redirectQueryString = http->getRedirectQueryString();
-    if (!redirectQueryString.empty()) php_register_variable_safe((char *)"REDIRECT_QUERY_STRING", (char *)redirectQueryString.c_str(), redirectQueryString.size(), track_vars_array);
+    if (!redirectQueryString.empty()) php_register_variable_safe((char *) "REDIRECT_QUERY_STRING", (char *) redirectQueryString.c_str(), redirectQueryString.size(), track_vars_array);
     std::string redirectUrl = http->getRedirectUrl();
-    if (!redirectUrl.empty()) php_register_variable_safe((char *)"REDIRECT_URL", (char *)redirectUrl.c_str(), redirectUrl.size(), track_vars_array);
+    if (!redirectUrl.empty()) php_register_variable_safe((char *) "REDIRECT_URL", (char *) redirectUrl.c_str(), redirectUrl.size(), track_vars_array);
     if (http->getRedirectStatus() != -1) {
       ZVAL_LONG(&value, http->getRedirectStatus());
-      php_register_variable_ex((char *)"REDIRECT_STATUS", &value, track_vars_array);
+      php_register_variable_ex((char *) "REDIRECT_STATUS", &value, track_vars_array);
     }
-    php_register_variable_safe((char *)"SERVER_PROTOCOL", (char *)"HTTP/1.1", 8, track_vars_array);
-    php_register_variable_safe((char *)"REMOTE_ADDR", (char *)header.remoteAddress.c_str(), header.remoteAddress.size(), track_vars_array);
+    php_register_variable_safe((char *) "SERVER_PROTOCOL", (char *) "HTTP/1.1", 8, track_vars_array);
+    php_register_variable_safe((char *) "REMOTE_ADDR", (char *) header.remoteAddress.c_str(), header.remoteAddress.size(), track_vars_array);
     ZVAL_LONG(&value, header.remotePort);
-    php_register_variable_ex((char *)"REMOTE_PORT", &value, track_vars_array);
-    if (SG(request_info).request_method) php_register_variable((char *)"REQUEST_METHOD", (char *)SG(request_info).request_method, track_vars_array);
-    if (SG(request_info).request_uri) php_register_variable((char *)"REQUEST_URI", SG(request_info).request_uri, track_vars_array);
+    php_register_variable_ex((char *) "REMOTE_PORT", &value, track_vars_array);
+    if (SG(request_info).request_method) php_register_variable((char *) "REQUEST_METHOD", (char *) SG(request_info).request_method, track_vars_array);
+    if (SG(request_info).request_uri) php_register_variable((char *) "REQUEST_URI", SG(request_info).request_uri, track_vars_array);
     if (header.contentLength > 0) {
       ZVAL_LONG(&value, header.contentLength);
-      php_register_variable_ex((char *)"CONTENT_LENGTH", &value, track_vars_array);
+      php_register_variable_ex((char *) "CONTENT_LENGTH", &value, track_vars_array);
     }
-    if (!header.contentType.empty()) php_register_variable_safe((char *)"CONTENT_TYPE", (char *)header.contentType.c_str(), header.contentType.size(), track_vars_array);
+    if (!header.contentType.empty()) php_register_variable_safe((char *) "CONTENT_TYPE", (char *) header.contentType.c_str(), header.contentType.size(), track_vars_array);
     for (std::map<std::string, std::string>::const_iterator i = header.fields.begin(); i != header.fields.end(); ++i) {
       std::string name = "HTTP_" + i->first;
       BaseLib::HelperFunctions::stringReplace(name, "-", "_");
       BaseLib::HelperFunctions::toUpper(name);
-      php_register_variable_safe((char *)name.c_str(), (char *)i->second.c_str(), i->second.size(), track_vars_array);
+      php_register_variable_safe((char *) name.c_str(), (char *) i->second.c_str(), i->second.size(), track_vars_array);
     }
     auto nodeBlueUriPathsExcludedFromLogin = Homegear::GD::bl->settings.nodeBlueUriPathsExcludedFromLogin();
     if (!nodeBlueUriPathsExcludedFromLogin.empty()) {
-      php_register_variable_safe((char *)"ANONYMOUS_NODE_BLUE_PATHS", (char*)nodeBlueUriPathsExcludedFromLogin.c_str(), nodeBlueUriPathsExcludedFromLogin.size(), track_vars_array);
+      php_register_variable_safe((char *) "ANONYMOUS_NODE_BLUE_PATHS", (char *) nodeBlueUriPathsExcludedFromLogin.c_str(), nodeBlueUriPathsExcludedFromLogin.size(), track_vars_array);
     }
     if (scriptInfo->clientInfo) {
       if (scriptInfo->clientInfo->authenticated) {
-        php_register_variable_safe((char *)"CLIENT_AUTHENTICATED", (char *)"true", 4, track_vars_array);
-        if (!scriptInfo->clientInfo->user.empty()) php_register_variable_safe((char *)"CLIENT_VERIFIED_USERNAME", (char *)scriptInfo->clientInfo->user.c_str(), scriptInfo->clientInfo->user.size(), track_vars_array);
-      } else php_register_variable_safe((char *)"CLIENT_AUTHENTICATED", (char *)"false", 5, track_vars_array);
+        php_register_variable_safe((char *) "CLIENT_AUTHENTICATED", (char *) "true", 4, track_vars_array);
+        if (!scriptInfo->clientInfo->user.empty())
+          php_register_variable_safe((char *) "CLIENT_VERIFIED_USERNAME",
+                                     (char *) scriptInfo->clientInfo->user.c_str(),
+                                     scriptInfo->clientInfo->user.size(),
+                                     track_vars_array);
+      } else php_register_variable_safe((char *) "CLIENT_AUTHENTICATED", (char *) "false", 5, track_vars_array);
       if (scriptInfo->clientInfo->hasClientCertificate) {
         std::string sslClientVerify = "SUCCESS";
-        php_register_variable_safe((char *)"SSL_CLIENT_VERIFY", (char *)sslClientVerify.c_str(), sslClientVerify.size(), track_vars_array);
-        php_register_variable_safe((char *)"SSL_CLIENT_S_DN", (char *)scriptInfo->clientInfo->distinguishedName.c_str(), scriptInfo->clientInfo->distinguishedName.size(), track_vars_array);
+        php_register_variable_safe((char *) "SSL_CLIENT_VERIFY", (char *) sslClientVerify.c_str(), sslClientVerify.size(), track_vars_array);
+        php_register_variable_safe((char *) "SSL_CLIENT_S_DN", (char *) scriptInfo->clientInfo->distinguishedName.c_str(), scriptInfo->clientInfo->distinguishedName.size(), track_vars_array);
         auto dnParts = BaseLib::HelperFunctions::splitAll(scriptInfo->clientInfo->distinguishedName, ',');
         for (auto &attribute : dnParts) {
           auto attributePair = BaseLib::HelperFunctions::splitFirst(attribute, '=');
@@ -809,12 +827,12 @@ static void php_homegear_register_variables(zval *track_vars_array) {
           BaseLib::HelperFunctions::toLower(attributePair.second);
           if (attributePair.first.empty() || attributePair.second.empty()) continue;
           std::string name = "SSL_CLIENT_S_DN_" + attributePair.first;
-          php_register_variable_safe((char *)name.c_str(), (char *)attributePair.second.c_str(), attributePair.second.size(), track_vars_array);
+          php_register_variable_safe((char *) name.c_str(), (char *) attributePair.second.c_str(), attributePair.second.size(), track_vars_array);
         }
       }
     } else {
       std::string sslClientVerify = "NONE";
-      php_register_variable_safe((char *)"SSL_CLIENT_VERIFY", (char *)sslClientVerify.c_str(), sslClientVerify.size(), track_vars_array);
+      php_register_variable_safe((char *) "SSL_CLIENT_VERIFY", (char *) sslClientVerify.c_str(), sslClientVerify.size(), track_vars_array);
     }
 
     zval_ptr_dtor(&value);
@@ -838,16 +856,16 @@ void php_homegear_invoke_rpc(std::string &methodName, BaseLib::PVariable &parame
 
 /* RPC functions */
 ZEND_FUNCTION(print_v) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
   if (argc != 1 && argc != 2) {
-    php_error_docref(NULL, E_WARNING, "print_v() expects 1 or 2 arguments.");
+    php_error_docref(nullptr, E_WARNING, "print_v() expects 1 or 2 arguments.");
     RETURN_NULL();
   }
   if (argc >= 2 && Z_TYPE(args[1]) != IS_TRUE && Z_TYPE(args[1]) != IS_FALSE) {
-    php_error_docref(NULL, E_WARNING, "Parameter \"return\" is not of type boolean.");
+    php_error_docref(nullptr, E_WARNING, "Parameter \"return\" is not of type boolean.");
     RETURN_NULL();
   }
 
@@ -860,13 +878,19 @@ ZEND_FUNCTION(print_v) {
   else php_homegear_ub_write_string(result);
 }
 
+ZEND_FUNCTION(hg_generate_webssh_token) {
+  std::string methodName("generateWebSshToken");
+  BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
+  php_homegear_invoke_rpc(methodName, parameters, return_value, true);
+}
+
 ZEND_FUNCTION(hg_get_script_id) {
   std::string id = std::to_string(SEG(id)) + ',' + SEG(token);
   ZVAL_STRINGL(return_value, id.c_str(), id.size());
 }
 
 ZEND_FUNCTION(hg_register_thread) {
-  if (_disposed) RETURN_FALSE;
+  if (disposed_) RETURN_FALSE;
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -906,7 +930,7 @@ ZEND_FUNCTION(hg_register_thread) {
 
 // {{{ Module functions
 ZEND_FUNCTION(hg_list_modules) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
 
   std::string methodName("listModules");
   BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
@@ -914,7 +938,7 @@ ZEND_FUNCTION(hg_list_modules) {
 }
 
 ZEND_FUNCTION(hg_load_module) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -940,7 +964,7 @@ ZEND_FUNCTION(hg_load_module) {
 }
 
 ZEND_FUNCTION(hg_unload_module) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -961,12 +985,12 @@ ZEND_FUNCTION(hg_unload_module) {
 
   std::string methodName("unloadModule");
   BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(filename)));
+  parameters->arrayValue->push_back(std::make_shared<BaseLib::Variable>(filename));
   php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
 
 ZEND_FUNCTION(hg_reload_module) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -996,7 +1020,7 @@ ZEND_FUNCTION(hg_reload_module) {
 // {{{ User functions
 
 ZEND_FUNCTION(hg_auth) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1024,7 +1048,7 @@ ZEND_FUNCTION(hg_auth) {
 }
 
 ZEND_FUNCTION(hg_create_user) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1070,7 +1094,7 @@ ZEND_FUNCTION(hg_create_user) {
 }
 
 ZEND_FUNCTION(hg_delete_user) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1091,7 +1115,7 @@ ZEND_FUNCTION(hg_delete_user) {
 }
 
 ZEND_FUNCTION(hg_get_user_metadata) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1113,7 +1137,7 @@ ZEND_FUNCTION(hg_get_user_metadata) {
 }
 
 ZEND_FUNCTION(hg_set_user_metadata) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1143,7 +1167,7 @@ ZEND_FUNCTION(hg_set_user_metadata) {
 }
 
 ZEND_FUNCTION(hg_set_user_privileges) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1162,7 +1186,7 @@ ZEND_FUNCTION(hg_set_user_privileges) {
 }
 
 ZEND_FUNCTION(hg_set_language) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1181,7 +1205,7 @@ ZEND_FUNCTION(hg_set_language) {
 }
 
 ZEND_FUNCTION(hg_update_user) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1227,7 +1251,7 @@ ZEND_FUNCTION(hg_update_user) {
 }
 
 ZEND_FUNCTION(hg_user_exists) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1248,7 +1272,7 @@ ZEND_FUNCTION(hg_user_exists) {
 }
 
 ZEND_FUNCTION(hg_users) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   std::string methodName("listUsers");
   BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
   php_homegear_invoke_rpc(methodName, parameters, return_value, true);
@@ -1256,7 +1280,7 @@ ZEND_FUNCTION(hg_users) {
 // }}}
 
 ZEND_FUNCTION(hg_poll_event) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   if (SEG(id) == 0) {
     zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
     RETURN_FALSE;
@@ -1360,28 +1384,29 @@ ZEND_FUNCTION(hg_poll_event) {
       ZVAL_LONG(&element, eventData->value->integerValue64);
       add_assoc_zval_ex(return_value, "BUTTONID", sizeof("BUTTONID") - 1, &element);
     }
-  } else RETURN_FALSE;
+  } else
+    RETURN_FALSE;
 }
 
 ZEND_FUNCTION(hg_list_rpc_clients) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   std::string methodName("listRpcClients");
   BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
   php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
 
 ZEND_FUNCTION(hg_peer_exists) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   unsigned long peerId = 0;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &peerId) != SUCCESS) RETURN_NULL();
   std::string methodName("peerExists");
   BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)peerId)));
+  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t) peerId)));
   php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
 
 ZEND_FUNCTION(hg_subscribe_peer) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   if (SEG(id) == 0) {
     zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
     RETURN_FALSE;
@@ -1432,7 +1457,7 @@ ZEND_FUNCTION(hg_subscribe_peer) {
 }
 
 ZEND_FUNCTION(hg_unsubscribe_peer) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   if (SEG(id) == 0) {
     zend_throw_exception(homegear_exception_class_entry, "Script id is unset. Did you call \"registerThread\"?", -1);
     RETURN_FALSE;
@@ -1482,7 +1507,7 @@ ZEND_FUNCTION(hg_unsubscribe_peer) {
 }
 
 ZEND_FUNCTION(hg_log) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1507,7 +1532,8 @@ ZEND_FUNCTION(hg_log) {
     if (logLevel <= SEG(logLevel)) {
       if (logLevel > 3) errorLog = false;
       logLevel = 0;
-    } else RETURN_TRUE;
+    } else
+      RETURN_TRUE;
   }
 
   if (SEG(peerId) != 0) Homegear::GD::out.printMessage("Script log (peer id: " + std::to_string(SEG(peerId)) + "): " + message, logLevel, errorLog);
@@ -1517,7 +1543,7 @@ ZEND_FUNCTION(hg_log) {
 }
 
 ZEND_FUNCTION(hg_set_script_log_level) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1535,7 +1561,8 @@ ZEND_FUNCTION(hg_set_script_log_level) {
   {
     std::lock_guard<std::mutex> eventsMapGuard(Homegear::PhpEvents::eventsMapMutex);
     std::map<int32_t, std::shared_ptr<Homegear::PhpEvents>>::iterator eventsIterator = Homegear::PhpEvents::eventsMap.find(SEG(id));
-    if (eventsIterator == Homegear::PhpEvents::eventsMap.end() || !eventsIterator->second || eventsIterator->second->getToken().empty() || eventsIterator->second->getToken() != SEG(token)) RETURN_FALSE;
+    if (eventsIterator == Homegear::PhpEvents::eventsMap.end() || !eventsIterator->second || eventsIterator->second->getToken().empty() || eventsIterator->second->getToken() != SEG(token))
+      RETURN_FALSE;
     eventsIterator->second->setLogLevel(logLevel);
   }
 
@@ -1543,7 +1570,7 @@ ZEND_FUNCTION(hg_set_script_log_level) {
 }
 
 ZEND_FUNCTION(hg_get_http_contents) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1595,7 +1622,7 @@ ZEND_FUNCTION(hg_get_http_contents) {
 }
 
 ZEND_FUNCTION(hg_download) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1657,7 +1684,7 @@ ZEND_FUNCTION(hg_download) {
 }
 
 ZEND_FUNCTION(hg_json_encode) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1676,7 +1703,7 @@ ZEND_FUNCTION(hg_json_encode) {
 }
 
 ZEND_FUNCTION(hg_json_decode) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1697,7 +1724,7 @@ ZEND_FUNCTION(hg_json_decode) {
 }
 
 ZEND_FUNCTION(hg_ssdp_search) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1750,7 +1777,7 @@ ZEND_FUNCTION(hg_ssdp_search) {
 }
 
 ZEND_FUNCTION(hg_configure_gateway) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1836,36 +1863,41 @@ ZEND_FUNCTION(hg_configure_gateway) {
     std::vector<char> encodedRequest;
     rpcEncoder.encodeRequest("configure", parameters, encodedRequest);
 
-    BaseLib::TcpSocket socket(Homegear::GD::bl.get(), host, std::to_string(port));
-    socket.open();
-    if (!socket.connected()) {
+    C1Net::TcpSocketInfo tcp_socket_info;
+    C1Net::TcpSocketHostInfo tcp_socket_host_info;
+    tcp_socket_host_info.host = host;
+    tcp_socket_host_info.port = port;
+    C1Net::TcpSocket socket(tcp_socket_info, tcp_socket_host_info);
+    socket.Open();
+    if (!socket.Connected()) {
       zend_throw_exception(homegear_exception_class_entry, "Could not connect to gateway.", -1);
       RETURN_NULL();
     }
-    socket.proofwrite(encodedRequest);
+    socket.Send((uint8_t *) encodedRequest.data(), encodedRequest.size());
 
     //{{{ Receive response
     ssize_t receivedBytes = 0;
     const int32_t bufferSize = 1024;
     std::array<char, bufferSize + 1> buffer;
+    bool more_data = false;
 
     BaseLib::Rpc::BinaryRpc binaryRpc(Homegear::GD::bl.get());
 
     while (!binaryRpc.isFinished()) {
       try {
-        receivedBytes = socket.proofread(buffer.data(), bufferSize);
+        receivedBytes = socket.Read((uint8_t *) buffer.data(), bufferSize, more_data);
         //Some clients send only one byte in the first packet
-        if (receivedBytes == 1 && !binaryRpc.processingStarted()) receivedBytes += socket.proofread(buffer.data() + 1, bufferSize - 1);
+        if (receivedBytes == 1 && !binaryRpc.processingStarted()) receivedBytes += socket.Read((uint8_t *) buffer.data() + 1, bufferSize - 1, more_data);
       }
-      catch (const BaseLib::SocketTimeOutException &ex) {
+      catch (const C1Net::TimeoutException &ex) {
         zend_throw_exception(homegear_exception_class_entry, "Reading from gateway timed out", -2);
         RETURN_NULL();
       }
-      catch (const BaseLib::SocketClosedException &ex) {
+      catch (const C1Net::ClosedException &ex) {
         zend_throw_exception(homegear_exception_class_entry, ex.what(), -1);
         RETURN_NULL();
       }
-      catch (const BaseLib::SocketOperationException &ex) {
+      catch (const C1Net::Exception &ex) {
         zend_throw_exception(homegear_exception_class_entry, ex.what(), -1);
         RETURN_NULL();
       }
@@ -1877,7 +1909,9 @@ ZEND_FUNCTION(hg_configure_gateway) {
       try {
         int32_t processedBytes = binaryRpc.process(buffer.data(), receivedBytes);
         if (processedBytes < receivedBytes) {
-          zend_throw_exception(homegear_exception_class_entry, ("Received more bytes (" + std::to_string(receivedBytes) + ") than binary packet size (" + std::to_string(processedBytes) + ")").c_str(), -1);
+          zend_throw_exception(homegear_exception_class_entry,
+                               ("Received more bytes (" + std::to_string(receivedBytes) + ") than binary packet size (" + std::to_string(processedBytes) + ")").c_str(),
+                               -1);
           RETURN_NULL();
         }
       }
@@ -1903,7 +1937,7 @@ ZEND_FUNCTION(hg_configure_gateway) {
 }
 
 ZEND_FUNCTION(hg_check_license) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -1932,84 +1966,84 @@ ZEND_FUNCTION(hg_check_license) {
 
   std::string methodName("checkLicense");
   BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)moduleId)));
-  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)familyId)));
-  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)deviceId)));
+  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t) moduleId)));
+  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t) familyId)));
+  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t) deviceId)));
   if (!licenseKey.empty()) parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(licenseKey)));
   php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
 
 ZEND_FUNCTION(hg_remove_license) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   long moduleId = -1;
   long familyId = -1;
   long deviceId = -1;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "lll", &moduleId, &familyId, &deviceId) != SUCCESS) RETURN_NULL();
   std::string methodName("removeLicense");
   BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)moduleId)));
-  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)familyId)));
-  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)deviceId)));
+  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t) moduleId)));
+  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t) familyId)));
+  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t) deviceId)));
   php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
 
 ZEND_FUNCTION(hg_get_license_states) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   long moduleId = -1;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &moduleId) != SUCCESS) RETURN_NULL();
   std::string methodName("getLicenseStates");
   BaseLib::PVariable parameters(new BaseLib::Variable(BaseLib::VariableType::tArray));
-  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t)moduleId)));
+  parameters->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable((int32_t) moduleId)));
   php_homegear_invoke_rpc(methodName, parameters, return_value, true);
 }
 
 ZEND_FUNCTION(hg_shutting_down) {
-  if (_disposed || Homegear::GD::bl->shuttingDown) RETURN_TRUE;
+  if (disposed_ || Homegear::GD::bl->shuttingDown) RETURN_TRUE;
   RETURN_FALSE;
 }
 
 ZEND_FUNCTION(hg_gpio_export) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   long gpio = -1;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
-  _superglobals.gpio->exportGpio(gpio);
+  super_globals_.gpio->exportGpio(gpio);
 }
 
 ZEND_FUNCTION(hg_gpio_open) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   long gpio = -1;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
-  _superglobals.gpio->openDevice(gpio, false);
+  super_globals_.gpio->openDevice(gpio, false);
 }
 
 ZEND_FUNCTION(hg_gpio_close) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   long gpio = -1;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
-  _superglobals.gpio->closeDevice(gpio);
+  super_globals_.gpio->closeDevice(gpio);
 }
 
 ZEND_FUNCTION(hg_gpio_set_direction) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   long gpio = -1;
   long direction = -1;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &direction) != SUCCESS) RETURN_NULL();
-  _superglobals.gpio->setDirection(gpio, (BaseLib::LowLevel::Gpio::GpioDirection::Enum)direction);
+  super_globals_.gpio->setDirection(gpio, (BaseLib::LowLevel::Gpio::GpioDirection::Enum) direction);
 }
 
 ZEND_FUNCTION(hg_gpio_set_edge) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   long gpio = -1;
   long edge = -1;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &gpio, &edge) != SUCCESS) RETURN_NULL();
-  _superglobals.gpio->setEdge(gpio, (BaseLib::LowLevel::Gpio::GpioEdge::Enum)edge);
+  super_globals_.gpio->setEdge(gpio, (BaseLib::LowLevel::Gpio::GpioEdge::Enum) edge);
 }
 
 ZEND_FUNCTION(hg_gpio_get) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   long gpio = -1;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &gpio) != SUCCESS) RETURN_NULL();
-  if (_superglobals.gpio->get(gpio)) {
+  if (super_globals_.gpio->get(gpio)) {
     RETURN_TRUE;
   } else {
     RETURN_FALSE;
@@ -2017,15 +2051,15 @@ ZEND_FUNCTION(hg_gpio_get) {
 }
 
 ZEND_FUNCTION(hg_gpio_set) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   long gpio = -1;
   zend_bool value = 0;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "lb", &gpio, &value) != SUCCESS) RETURN_NULL();
-  _superglobals.gpio->set(gpio, (bool)value);
+  super_globals_.gpio->set(gpio, (bool) value);
 }
 
 ZEND_FUNCTION(hg_gpio_poll) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   long gpio = -1;
   long timeout = -1;
   int argc = 0;
@@ -2044,12 +2078,12 @@ ZEND_FUNCTION(hg_gpio_poll) {
     return;
   }
 
-  ZVAL_LONG(return_value, _superglobals.gpio->poll(gpio, timeout, debounce));
+  ZVAL_LONG(return_value, super_globals_.gpio->poll(gpio, timeout, debounce));
 }
 
 ZEND_FUNCTION(hg_serial_open) {
   try {
-    if (_disposed) RETURN_NULL();
+    if (disposed_) RETURN_NULL();
     std::string device;
     long baudrate = 38400;
     bool evenParity = false;
@@ -2086,7 +2120,7 @@ ZEND_FUNCTION(hg_serial_open) {
               if (Z_TYPE(args[4]) != IS_LONG) php_error_docref(NULL, E_WARNING, "characterSize is not of type integer.");
               else if (Z_LVAL(args[4]) < 5 || Z_LVAL(args[4]) > 8) php_error_docref(NULL, E_WARNING, "Value for characterSize is invalid.");
               else {
-                characterSize = (BaseLib::SerialReaderWriter::CharacterSize)Z_LVAL(args[4]);
+                characterSize = (BaseLib::SerialReaderWriter::CharacterSize) Z_LVAL(args[4]);
               }
 
               if (argc == 6) {
@@ -2106,9 +2140,9 @@ ZEND_FUNCTION(hg_serial_open) {
     serialDevice->openDevice(evenParity, oddParity, false, characterSize, twoStopBits);
     if (serialDevice->isOpen()) {
       int32_t descriptor = serialDevice->fileDescriptor()->descriptor;
-      _superglobals.serialDevicesMutex.lock();
-      _superglobals.serialDevices.insert(std::pair<int, std::shared_ptr<BaseLib::SerialReaderWriter>>(descriptor, serialDevice));
-      _superglobals.serialDevicesMutex.unlock();
+      super_globals_.serialDevicesMutex.lock();
+      super_globals_.serialDevices.insert(std::pair<int, std::shared_ptr<BaseLib::SerialReaderWriter>>(descriptor, serialDevice));
+      super_globals_.serialDevicesMutex.unlock();
       ZVAL_LONG(return_value, descriptor);
     } else {
       RETURN_FALSE;
@@ -2122,16 +2156,16 @@ ZEND_FUNCTION(hg_serial_open) {
 
 ZEND_FUNCTION(hg_serial_close) {
   try {
-    if (_disposed) RETURN_NULL();
+    if (disposed_) RETURN_NULL();
     long id = -1;
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "l", &id) != SUCCESS) RETURN_NULL();
-    _superglobals.serialDevicesMutex.lock();
-    std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>>::iterator deviceIterator = _superglobals.serialDevices.find(id);
-    if (deviceIterator != _superglobals.serialDevices.end()) {
+    super_globals_.serialDevicesMutex.lock();
+    std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>>::iterator deviceIterator = super_globals_.serialDevices.find(id);
+    if (deviceIterator != super_globals_.serialDevices.end()) {
       if (deviceIterator->second) deviceIterator->second->closeDevice();
-      _superglobals.serialDevices.erase(id);
+      super_globals_.serialDevices.erase(id);
     }
-    _superglobals.serialDevicesMutex.unlock();
+    super_globals_.serialDevicesMutex.unlock();
     RETURN_TRUE;
   }
   catch (BaseLib::SerialReaderWriterException &ex) {
@@ -2142,7 +2176,7 @@ ZEND_FUNCTION(hg_serial_close) {
 
 ZEND_FUNCTION(hg_serial_read) {
   try {
-    if (_disposed) RETURN_NULL();
+    if (disposed_) RETURN_NULL();
     long id = -1;
     long timeout = -1;
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &id, &timeout) != SUCCESS) RETURN_NULL();
@@ -2152,12 +2186,12 @@ ZEND_FUNCTION(hg_serial_read) {
     }
     if (timeout > 5000) timeout = 5000;
     std::shared_ptr<BaseLib::SerialReaderWriter> serialReaderWriter;
-    _superglobals.serialDevicesMutex.lock();
-    std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>>::iterator deviceIterator = _superglobals.serialDevices.find(id);
-    if (deviceIterator != _superglobals.serialDevices.end()) {
+    super_globals_.serialDevicesMutex.lock();
+    std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>>::iterator deviceIterator = super_globals_.serialDevices.find(id);
+    if (deviceIterator != super_globals_.serialDevices.end()) {
       if (deviceIterator->second) serialReaderWriter = deviceIterator->second;
     }
-    _superglobals.serialDevicesMutex.unlock();
+    super_globals_.serialDevicesMutex.unlock();
     if (!serialReaderWriter) {
       ZVAL_LONG(return_value, -1);
       return;
@@ -2181,7 +2215,7 @@ ZEND_FUNCTION(hg_serial_read) {
 
 ZEND_FUNCTION(hg_serial_readline) {
   try {
-    if (_disposed) RETURN_NULL();
+    if (disposed_) RETURN_NULL();
     long id = -1;
     long timeout = -1;
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "ll", &id, &timeout) != SUCCESS) RETURN_NULL();
@@ -2191,12 +2225,12 @@ ZEND_FUNCTION(hg_serial_readline) {
     }
     if (timeout > 5000) timeout = 5000;
     std::shared_ptr<BaseLib::SerialReaderWriter> serialReaderWriter;
-    _superglobals.serialDevicesMutex.lock();
-    std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>>::iterator deviceIterator = _superglobals.serialDevices.find(id);
-    if (deviceIterator != _superglobals.serialDevices.end()) {
+    super_globals_.serialDevicesMutex.lock();
+    std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>>::iterator deviceIterator = super_globals_.serialDevices.find(id);
+    if (deviceIterator != super_globals_.serialDevices.end()) {
       if (deviceIterator->second) serialReaderWriter = deviceIterator->second;
     }
-    _superglobals.serialDevicesMutex.unlock();
+    super_globals_.serialDevicesMutex.unlock();
     if (!serialReaderWriter) {
       ZVAL_LONG(return_value, -1);
       return;
@@ -2222,7 +2256,7 @@ ZEND_FUNCTION(hg_serial_readline) {
 
 ZEND_FUNCTION(hg_serial_write) {
   try {
-    if (_disposed) RETURN_NULL();
+    if (disposed_) RETURN_NULL();
     int argc = 0;
     zval *args = nullptr;
     if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -2245,9 +2279,9 @@ ZEND_FUNCTION(hg_serial_write) {
     std::shared_ptr<BaseLib::SerialReaderWriter> serialReaderWriter;
 
     {
-      std::lock_guard<std::mutex> serialDevicesGuard(_superglobals.serialDevicesMutex);
-      std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>>::iterator deviceIterator = _superglobals.serialDevices.find(id);
-      if (deviceIterator != _superglobals.serialDevices.end()) {
+      std::lock_guard<std::mutex> serialDevicesGuard(super_globals_.serialDevicesMutex);
+      std::map<int, std::shared_ptr<BaseLib::SerialReaderWriter>>::iterator deviceIterator = super_globals_.serialDevices.find(id);
+      if (deviceIterator != super_globals_.serialDevices.end()) {
         if (deviceIterator->second) serialReaderWriter = deviceIterator->second;
       }
     }
@@ -2287,7 +2321,7 @@ ZEND_FUNCTION(hg_i2c_open)
     }
     if(device.empty()) RETURN_FALSE;
 
-    int32_t descriptor = open(device.c_str(), O_RDWR);
+    int32_t descriptor = open(device.c_str(), O_RDWR | O_CLOEXEC);
     if(descriptor == -1) RETURN_FALSE;
     if (ioctl(descriptor, I2C_SLAVE, address) == -1)
     {
@@ -2391,7 +2425,7 @@ ZEND_FUNCTION(hg_i2c_write)
 #endif
 
 ZEND_FUNCTION(hg_getenv) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -2405,7 +2439,7 @@ ZEND_FUNCTION(hg_getenv) {
   }
   if (varname.empty()) {
     array_init(return_value);
-    std::lock_guard<std::mutex> envGuard(_envMutex);
+    std::lock_guard<std::mutex> envGuard(env_mutex_);
     for (int32_t i = 0; environ[i] != nullptr; i++) {
       std::string entry(environ[i]);
       auto pair = BaseLib::HelperFunctions::splitFirst(entry, '=');
@@ -2419,8 +2453,8 @@ ZEND_FUNCTION(hg_getenv) {
     std::string value;
 
     {
-      std::lock_guard<std::mutex> envGuard(_envMutex);
-      auto variable = getenv((char *)varname.c_str());
+      std::lock_guard<std::mutex> envGuard(env_mutex_);
+      auto variable = getenv((char *) varname.c_str());
       if (!variable) RETURN_FALSE;
       value = std::string(variable);
     }
@@ -2430,7 +2464,7 @@ ZEND_FUNCTION(hg_getenv) {
 }
 
 ZEND_FUNCTION(hg_putenv) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   int argc = 0;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "*", &args, &argc) != SUCCESS) RETURN_NULL();
@@ -2451,10 +2485,10 @@ ZEND_FUNCTION(hg_putenv) {
   //Don't use putenv, as it requires the string to be persistent throughout the lifetime of the program.
   {
     if (envPair.second.empty()) {
-      std::lock_guard<std::mutex> envGuard(_envMutex);
+      std::lock_guard<std::mutex> envGuard(env_mutex_);
       returnCode = unsetenv(envPair.first.c_str());
     } else {
-      std::lock_guard<std::mutex> envGuard(_envMutex);
+      std::lock_guard<std::mutex> envGuard(env_mutex_);
       returnCode = setenv(envPair.first.c_str(), envPair.second.c_str(), 1);
     }
   }
@@ -2467,7 +2501,7 @@ ZEND_FUNCTION(hg_putenv) {
 }
 
 ZEND_METHOD(Homegear, __call) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   zval *zMethodName = nullptr;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
@@ -2477,7 +2511,7 @@ ZEND_METHOD(Homegear, __call) {
 }
 
 ZEND_METHOD(Homegear, __callStatic) {
-  if (_disposed) RETURN_NULL();
+  if (disposed_) RETURN_NULL();
   zval *zMethodName = nullptr;
   zval *args = nullptr;
   if (zend_parse_parameters(ZEND_NUM_ARGS(), "zz", &zMethodName, &args) != SUCCESS) RETURN_NULL();
@@ -2494,6 +2528,7 @@ ZEND_END_ARG_INFO()
 static const zend_function_entry homegear_methods[] = {
     ZEND_ME(Homegear, __call, php_homegear_two_args, ZEND_ACC_PUBLIC)
     ZEND_ME(Homegear, __callStatic, php_homegear_two_args, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
+    ZEND_ME_MAPPING(generateWebSshToken, hg_generate_webssh_token, hg_generate_webssh_token_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     ZEND_ME_MAPPING(getScriptId, hg_get_script_id, hg_get_script_id_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     ZEND_ME_MAPPING(registerThread, hg_register_thread, hg_register_thread_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
     ZEND_ME_MAPPING(log, hg_log, hg_log_arg_info, ZEND_ACC_PUBLIC | ZEND_ACC_STATIC)
@@ -2545,9 +2580,9 @@ static const zend_function_entry homegear_i2c_methods[] = {
 #endif
 
 int php_homegear_init() {
-  _superglobals.http = new BaseLib::Http();
-  _superglobals.gpio = new BaseLib::LowLevel::Gpio(Homegear::GD::bl.get(), Homegear::GD::bl->settings.gpioPath());
-  _disposed = false;
+  super_globals_.http = new BaseLib::Http();
+  super_globals_.gpio = new BaseLib::LowLevel::Gpio(Homegear::GD::bl.get(), Homegear::GD::bl->settings.gpioPath());
+  disposed_ = false;
   pthread_key_create(php_homegear_get_pthread_key(), pthread_data_destructor);
 
 #if PHP_VERSION_ID < 70400
@@ -2592,7 +2627,7 @@ int php_homegear_init() {
    */
   sapi_startup(&php_homegear_sapi_module);
 
-  sapi_ini_entries = (char *)malloc(sizeof(HARDCODED_INI));
+  sapi_ini_entries = (char *) malloc(sizeof(HARDCODED_INI));
   memcpy(sapi_ini_entries, HARDCODED_INI, sizeof(HARDCODED_INI));
   php_homegear_sapi_module.ini_entries = sapi_ini_entries;
 
@@ -2602,29 +2637,33 @@ int php_homegear_init() {
 }
 
 void php_homegear_deinit() {
-  _disposed = true;
-  if (_disposed) return;
+  if (disposed_) return;
+  disposed_ = true;
   php_homegear_sapi_module.shutdown(&php_homegear_sapi_module);
   sapi_shutdown();
 
   tsrm_shutdown(); //Needs to be called once for the entire process (see TSRM.c)
   if (ini_path_override) free(ini_path_override);
   if (sapi_ini_entries) free(sapi_ini_entries);
-  if (_superglobals.http) {
-    delete (_superglobals.http);
-    _superglobals.http = nullptr;
+  if (super_globals_.http) {
+    delete (super_globals_.http);
+    super_globals_.http = nullptr;
   }
-  if (_superglobals.gpio) {
-    delete (_superglobals.gpio);
-    _superglobals.gpio = nullptr;
+  if (super_globals_.gpio) {
+    delete (super_globals_.gpio);
+    super_globals_.gpio = nullptr;
   }
-  _superglobals.serialDevicesMutex.lock();
-  _superglobals.serialDevices.clear();
-  _superglobals.serialDevicesMutex.unlock();
+  super_globals_.serialDevicesMutex.lock();
+  super_globals_.serialDevices.clear();
+  super_globals_.serialDevicesMutex.unlock();
 }
 
 static int php_homegear_startup(sapi_module_struct *sapi_globals) {
+#if PHP_VERSION_ID < 80200
   if (php_module_startup(sapi_globals, &homegear_module_entry, 1) == FAILURE) return FAILURE;
+#else
+  if (php_module_startup(sapi_globals, &homegear_module_entry) == FAILURE) return FAILURE;
+#endif
 
   // {{{ Fix for bug #71115 which causes process to crash when excessively using $_GLOBALS. Remove once bug is fixed. => is fixed
 
@@ -2749,12 +2788,32 @@ static PHP_MINIT_FUNCTION(homegear) {
   zend_declare_class_constant_stringl(homegear_class_entry, "SCRIPT_PATH", sizeof("SCRIPT_PATH") - 1, Homegear::GD::bl->settings.scriptPath().c_str(), Homegear::GD::bl->settings.scriptPath().size());
   zend_declare_class_constant_stringl(homegear_class_entry, "MODULE_PATH", sizeof("MODULE_PATH") - 1, Homegear::GD::bl->settings.modulePath().c_str(), Homegear::GD::bl->settings.modulePath().size());
   zend_declare_class_constant_stringl(homegear_class_entry, "DATA_PATH", sizeof("DATA_PATH") - 1, Homegear::GD::bl->settings.dataPath().c_str(), Homegear::GD::bl->settings.dataPath().size());
-  zend_declare_class_constant_stringl(homegear_class_entry, "WRITEABLE_DATA_PATH", sizeof("WRITEABLE_DATA_PATH") - 1, Homegear::GD::bl->settings.writeableDataPath().c_str(), Homegear::GD::bl->settings.writeableDataPath().size());
+  zend_declare_class_constant_stringl(homegear_class_entry,
+                                      "WRITEABLE_DATA_PATH",
+                                      sizeof("WRITEABLE_DATA_PATH") - 1,
+                                      Homegear::GD::bl->settings.writeableDataPath().c_str(),
+                                      Homegear::GD::bl->settings.writeableDataPath().size());
   zend_declare_class_constant_stringl(homegear_class_entry, "SOCKET_PATH", sizeof("SOCKET_PATH") - 1, Homegear::GD::bl->settings.socketPath().c_str(), Homegear::GD::bl->settings.socketPath().size());
-  zend_declare_class_constant_stringl(homegear_class_entry, "LOGFILE_PATH", sizeof("LOGFILE_PATH") - 1, Homegear::GD::bl->settings.logfilePath().c_str(), Homegear::GD::bl->settings.logfilePath().size());
-  zend_declare_class_constant_stringl(homegear_class_entry, "WORKING_DIRECTORY", sizeof("WORKING_DIRECTORY") - 1, Homegear::GD::bl->settings.workingDirectory().c_str(), Homegear::GD::bl->settings.workingDirectory().size());
-  zend_declare_class_constant_stringl(homegear_class_entry, "NODE_BLUE_PATH", sizeof("NODE_BLUE_PATH") - 1, Homegear::GD::bl->settings.nodeBluePath().c_str(), Homegear::GD::bl->settings.nodeBluePath().size());
-  zend_declare_class_constant_stringl(homegear_class_entry, "NODE_BLUE_DATA_PATH", sizeof("NODE_BLUE_DATA_PATH") - 1, Homegear::GD::bl->settings.nodeBlueDataPath().c_str(), Homegear::GD::bl->settings.nodeBlueDataPath().size());
+  zend_declare_class_constant_stringl(homegear_class_entry,
+                                      "LOGFILE_PATH",
+                                      sizeof("LOGFILE_PATH") - 1,
+                                      Homegear::GD::bl->settings.logfilePath().c_str(),
+                                      Homegear::GD::bl->settings.logfilePath().size());
+  zend_declare_class_constant_stringl(homegear_class_entry,
+                                      "WORKING_DIRECTORY",
+                                      sizeof("WORKING_DIRECTORY") - 1,
+                                      Homegear::GD::bl->settings.workingDirectory().c_str(),
+                                      Homegear::GD::bl->settings.workingDirectory().size());
+  zend_declare_class_constant_stringl(homegear_class_entry,
+                                      "NODE_BLUE_PATH",
+                                      sizeof("NODE_BLUE_PATH") - 1,
+                                      Homegear::GD::bl->settings.nodeBluePath().c_str(),
+                                      Homegear::GD::bl->settings.nodeBluePath().size());
+  zend_declare_class_constant_stringl(homegear_class_entry,
+                                      "NODE_BLUE_DATA_PATH",
+                                      sizeof("NODE_BLUE_DATA_PATH") - 1,
+                                      Homegear::GD::bl->settings.nodeBlueDataPath().c_str(),
+                                      Homegear::GD::bl->settings.nodeBlueDataPath().size());
 
   zend_class_entry homegearGpioCe{};
   INIT_CLASS_ENTRY(homegearGpioCe, "Homegear\\HomegearGpio", homegear_gpio_methods);

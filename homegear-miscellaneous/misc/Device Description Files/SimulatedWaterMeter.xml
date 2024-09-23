@@ -316,6 +316,7 @@ class HomegearDevice extends HomegearDeviceBase
                     <writeable>false</writeable>
                     <addonWriteable>true</addonWriteable>
                     <unit>l</unit>
+                    <unitCode>82</unitCode>
                     <casts>
                         <rpcBinary/>
                     </casts>

@@ -63,6 +63,8 @@ class ScriptEngineServer : public BaseLib::IQueue {
 
   bool lifetick();
 
+  BaseLib::PVariable getLoad();
+
   bool start();
 
   void stop();
@@ -183,10 +185,8 @@ class ScriptEngineServer : public BaseLib::IQueue {
   std::unique_ptr<BaseLib::Rpc::RpcDecoder> _rpcDecoder;
   std::unique_ptr<BaseLib::Rpc::RpcEncoder> _rpcEncoder;
 
-  std::mutex _lifetick1Mutex;
-  std::pair<int64_t, bool> _lifetick1;
-  std::mutex _lifetick2Mutex;
-  std::pair<int64_t, bool> _lifetick2;
+  std::pair<std::atomic<int64_t>, std::atomic<bool>> lifetick_1_;
+  std::pair<std::atomic<int64_t>, std::atomic<bool>> lifetick_2_;
 
   // {{{ Debugging / Valgrinding
   pid_t _manualClientCurrentProcessId = 1;
@@ -225,6 +225,8 @@ class ScriptEngineServer : public BaseLib::IQueue {
   void processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueueEntry> &entry);
 
   // {{{ RPC methods
+  BaseLib::PVariable generateWebSshToken(PScriptEngineClientData &clientData, PClientScriptInfo scriptInfo, BaseLib::PArray &parameters);
+
   BaseLib::PVariable registerScriptEngineClient(PScriptEngineClientData &clientData, BaseLib::PArray &parameters);
 
   BaseLib::PVariable scriptFinished(PScriptEngineClientData &clientData, int32_t scriptId, BaseLib::PArray &parameters);

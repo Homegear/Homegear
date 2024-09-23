@@ -50,6 +50,11 @@ namespace Homegear {
 
 namespace Rpc {
 
+class SocketBindException : public C1Net::Exception {
+ public:
+  explicit SocketBindException(const std::string &message) : C1Net::Exception(message) {}
+};
+
 class RpcServer {
  public:
   class Client : public BaseLib::RpcClientInfo {
@@ -92,6 +97,8 @@ class RpcServer {
 
   bool isRunning() { return !_stopped; }
 
+  static BaseLib::PFileDescriptor bindAndReturnSocket(BaseLib::FileDescriptorManager &fileDescriptorManager, const std::string &address, const std::string &port, uint32_t connectionBacklogSize, std::string &listenAddress, int32_t &listenPort);
+
   void start(BaseLib::Rpc::PServerInfo &settings);
 
   void stop();
@@ -100,9 +107,9 @@ class RpcServer {
 
   std::shared_ptr<std::map<std::string, std::shared_ptr<BaseLib::Rpc::RpcMethod>>> getMethods() { return _rpcMethods; };
 
-  bool methodExists(const BaseLib::PRpcClientInfo& clientInfo, std::string &methodName);
+  bool methodExists(const BaseLib::PRpcClientInfo &clientInfo, std::string &methodName);
 
-  BaseLib::PVariable callMethod(const BaseLib::PRpcClientInfo& clientInfo,
+  BaseLib::PVariable callMethod(const BaseLib::PRpcClientInfo &clientInfo,
                                 const std::string &methodName,
                                 BaseLib::PVariable &parameters);
 
@@ -112,11 +119,9 @@ class RpcServer {
  protected:
  private:
   BaseLib::Output _out;
-  static int32_t _currentClientID;
   BaseLib::Rpc::PServerInfo _info;
   gnutls_certificate_credentials_t _x509Cred = nullptr;
   gnutls_priority_t _tlsPriorityCache = nullptr;
-  gnutls_dh_params_t _dhParams = nullptr;
   int32_t _threadPolicy = SCHED_OTHER;
   int32_t _threadPriority = 0;
   std::atomic_bool _stopServer;
@@ -138,17 +143,15 @@ class RpcServer {
   std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
   std::unique_ptr<WebServer::WebServer> _webServer;
   std::unique_ptr<RestServer> _restServer;
-  std::mutex _lifetick1Mutex;
-  std::pair<int64_t, bool> _lifetick1;
-  std::mutex _lifetick2Mutex;
-  std::pair<int64_t, bool> _lifetick2;
-  std::unordered_map<std::string, std::string> cloudUserMap;
+  std::pair<std::atomic<int64_t>, std::atomic<bool>> lifetick_1_;
+  std::pair<std::atomic<int64_t>, std::atomic<bool>> lifetick_2_;
+  std::unordered_map<std::string, std::unordered_map<std::string, std::string>> _cloudUserMap;
 
   void collectGarbage();
 
   void getSocketDescriptor();
 
-  std::shared_ptr<BaseLib::FileDescriptor> getClientSocketDescriptor(std::string &address, int32_t &port);
+  C1Net::PSocket getClientSocketDescriptor(std::string &address, int32_t &port);
 
   void getSSLSocketDescriptor(std::shared_ptr<Client>);
 
@@ -157,7 +160,7 @@ class RpcServer {
   void readClient(std::shared_ptr<Client> client);
 
   void sendRPCResponseToClient(std::shared_ptr<Client> client,
-                               const BaseLib::PVariable& variable,
+                               const BaseLib::PVariable &variable,
                                int32_t messageId,
                                PacketType::Enum packetType,
                                bool keepAlive);
@@ -171,24 +174,24 @@ class RpcServer {
 
   void handleConnectionUpgrade(std::shared_ptr<Client> client, BaseLib::Http &http);
 
-  void analyzeRPC(const std::shared_ptr<Client>& client,
+  void analyzeRPC(const std::shared_ptr<Client> &client,
                   const std::vector<char> &packet,
                   PacketType::Enum packetType,
                   bool keepAlive);
 
-  void analyzeRPCResponse(const std::shared_ptr<Client>& client,
+  void analyzeRPCResponse(const std::shared_ptr<Client> &client,
                           const std::vector<char> &packet,
                           PacketType::Enum packetType,
                           bool keepAlive);
 
-  void callMethod(const std::shared_ptr<Client>& client,
+  void callMethod(const std::shared_ptr<Client> &client,
                   const std::string &methodName,
                   std::shared_ptr<std::vector<BaseLib::PVariable>> parameters,
                   int32_t messageId,
                   PacketType::Enum responseType,
                   bool keepAlive);
 
-  static std::string getHttpResponseHeader(const std::string& contentType, uint32_t contentLength, bool closeConnection);
+  static std::string getHttpResponseHeader(const std::string &contentType, uint32_t contentLength, bool closeConnection);
 
   void closeClientConnection(std::shared_ptr<Client> client);
 

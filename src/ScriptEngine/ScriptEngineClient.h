@@ -246,6 +246,12 @@ class ScriptEngineClient : public BaseLib::IQueue {
   BaseLib::PVariable lifetick(BaseLib::PArray &parameters);
 
   /**
+   * Returns load metrics.
+   * @param parameters Irrelevant for this method.
+   */
+  BaseLib::PVariable getLoad(BaseLib::PArray &parameters);
+
+  /**
    * Executes a new script.
    * @param parameters The parameters depend on the script type. See source code.
    */

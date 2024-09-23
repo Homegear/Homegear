@@ -19,7 +19,7 @@ WebServer::WebServer(std::shared_ptr<BaseLib::Rpc::ServerInfo::Info> &serverInfo
 WebServer::~WebServer() {
 }
 
-void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket, int32_t cacheTime) {
+void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<C1Net::TcpSocket> socket, int32_t cacheTime) {
   try {
     if (!socket) {
       _out.printError("Error: Socket is nullptr.");
@@ -28,16 +28,16 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
     std::string path = http.getHeader().path;
 
     BaseLib::EventHandlers eventHandlers = getEventHandlers();
-    for (BaseLib::EventHandlers::const_iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i) {
-      i->second->lock();
+    for (const auto &eventHandler: eventHandlers) {
+      eventHandler.second->lock();
       try {
-        if (i->second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: Calling onGet event handler.");
-        if (i->second->handler() && ((BaseLib::Rpc::IWebserverEventSink *)i->second->handler())->onGet(_serverInfo, http, socket, path)) {
-          i->second->unlock();
-          if (i->second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: onGet event handler handled event.");
+        if (eventHandler.second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: Calling onGet event handler.");
+        if (eventHandler.second->handler() && ((BaseLib::Rpc::IWebserverEventSink *)eventHandler.second->handler())->onGet(_serverInfo, http, socket, path)) {
+          eventHandler.second->unlock();
+          if (eventHandler.second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: onGet event handler handled event.");
           return;
         }
-        if (i->second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: onGet event handler did not handle event.");
+        if (eventHandler.second->handler() && GD::bl->settings.devLog()) GD::out.printInfo("Devlog: onGet event handler did not handle event.");
       }
       catch (const std::exception &ex) {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -45,7 +45,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
       catch (...) {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
       }
-      i->second->unlock();
+      eventHandler.second->unlock();
     }
 
     std::vector<char> content;
@@ -56,24 +56,25 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
       std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
       getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
       send(socket, content);
-      socket->close();
+      socket->Shutdown();
       return;
     }
 
     bool isDirectory = false;
     BaseLib::Io::isDirectory(_serverInfo->contentPath + path, isDirectory);
-    if (isDirectory || path == "node-blue" || path == "node-blue/" || path == "ui" || path == "ui/" || path == "admin" || path == "admin/") {
+    if (isDirectory || path == "node-blue" || path == "node-blue/" || path == "ui" || path == "ui/" || path == "admin" || path == "admin/" || path == "web-ssh" || path == "web-ssh/") {
       if (!path.empty() && path.back() != '/') {
         path = '/' + path + '/';
         std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
         getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
         send(socket, content);
-        socket->close();
+        socket->Shutdown();
         return;
       }
       if (path == "node-blue/") path = "node-blue/index.php";
       else if (path.compare(0, 3, "ui/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
       else if (path.compare(0, 6, "admin/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
+      else if (path.compare(0, 8, "web-ssh/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.hgs"))) {}
       else if (BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
       else if (BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
       else if (BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
@@ -83,7 +84,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
       else {
         getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
         send(socket, content);
-        socket->close();
+        socket->Shutdown();
         return;
       }
     }
@@ -96,7 +97,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
       if (contentString == "unauthorized") {
         getError(401, _http.getStatusText(401), "You are not logged in.", content);
         send(socket, content);
-        socket->close();
+        socket->Shutdown();
         return;
       } else if (!responseHeader.empty() || !contentString.empty()) {
         if (responseHeader.empty()) {
@@ -106,16 +107,16 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
         content.insert(content.end(), responseHeader.begin(), responseHeader.end());
         content.insert(content.end(), contentString.begin(), contentString.end());
         send(socket, content);
-        socket->close();
+        socket->Shutdown();
         return;
       }
     }
 
-    if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "node-blue/index.php" && path != "node-blue/signin.php" && path.compare(0, 3, "ui/") != 0 && path.compare(0, 6, "admin/") != 0) {
+    if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "node-blue/index.php" && path != "node-blue/signin.php" && path.compare(0, 3, "ui/") != 0 && path.compare(0, 6, "admin/") != 0 && path.compare(0, 8, "web-ssh/") != 0) {
       GD::out.printWarning("Warning: Requested URL not found: " + path);
       getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
       send(socket, content);
-      socket->close();
+      socket->Shutdown();
       return;
     }
 
@@ -144,6 +145,17 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
             else path = "admin/index.hgs";
           }
         }
+      } else if (path.compare(0, 8, "web-ssh/") == 0 && path.size() > 8) {
+        if (!BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + path.substr(8))) {
+          if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.hgs")) {
+            http.setRedirectUrl('/' + path);
+            http.setRedirectQueryString(http.getHeader().args);
+            http.setRedirectStatus(200);
+
+            if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php")) path = "web-ssh/index.php";
+            else path = "web-ssh/index.hgs";
+          }
+        }
       }
 
       std::string ending;
@@ -160,7 +172,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
         if (!BaseLib::Io::fileExists(fullPath)) {
           getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
           send(socket, content);
-          socket->close();
+          socket->Shutdown();
           return;
         }
       } else if (path == "node-blue/signin.php") {
@@ -169,7 +181,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
         if (!BaseLib::Io::fileExists(fullPath)) {
           getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
           send(socket, content);
-          socket->close();
+          socket->Shutdown();
           return;
         }
       } else if (path.compare(0, 6, "admin/") == 0) {
@@ -185,7 +197,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
           } else {
             getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
             send(socket, content);
-            socket->close();
+            socket->Shutdown();
             return;
           }
         } else fullPath = GD::bl->settings.adminUiPath() + path.substr(6);
@@ -203,11 +215,29 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
           } else {
             getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
             send(socket, content);
-            socket->close();
+            socket->Shutdown();
             return;
           }
         } else fullPath = GD::bl->settings.uiPath() + path.substr(3);
         contentPath = GD::bl->settings.uiPath();
+      } else if (path.compare(0, 8, "web-ssh/") == 0) {
+        if (path == "web-ssh/") {
+          if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php")) {
+            fullPath = GD::bl->settings.webSshPath() + "index.php";
+            relativePath += "index.php";
+            ending = "php";
+          } else if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.hgs")) {
+            fullPath = GD::bl->settings.webSshPath() + "index.hgs";
+            relativePath += "index.hgs";
+            ending = "hgs";
+          } else {
+            getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+            send(socket, content);
+            socket->Shutdown();
+            return;
+          }
+        } else fullPath = GD::bl->settings.webSshPath() + path.substr(8);
+        contentPath = GD::bl->settings.webSshPath();
       } else fullPath = _serverInfo->contentPath + path;
 
 #ifndef NO_SCRIPTENGINE
@@ -220,19 +250,16 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
         if (scriptInfo->http.getHeader().acceptEncoding & BaseLib::Http::AcceptEncoding::gzip) {
           std::vector<char> newContent = BaseLib::GZip::compress<std::vector<char>, std::string>(scriptInfo->output, 5);
           try {
-            scriptInfo->socket->proofwrite(newContent.data(), newContent.size());
+            scriptInfo->socket->Send((uint8_t *)newContent.data(), newContent.size());
           }
-          catch (BaseLib::SocketDataLimitException &ex) {
-            GD::out.printWarning("Warning: " + std::string(ex.what()));
-          }
-          catch (const BaseLib::SocketOperationException &ex) {
+          catch (const C1Net::Exception &ex) {
             GD::out.printError("Error: " + std::string(ex.what()));
           }
           catch (const std::exception &ex) {
             GD::out.printError(std::string("Error: ") + ex.what());
           }
         }
-        socket->close();
+        socket->Shutdown();
         return;
       }
 #endif
@@ -260,7 +287,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
       content.insert(content.end(), header.begin(), header.end());
       if (!contentString.empty()) content.insert(content.end(), contentString.begin(), contentString.end());
       send(socket, content);
-      socket->close();
+      socket->Shutdown();
     }
     catch (const std::exception &ex) {
       getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
@@ -276,7 +303,7 @@ void WebServer::get(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
   }
 }
 
-void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket) {
+void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<C1Net::TcpSocket> socket) {
   try {
     std::vector<char> content;
     if (!socket) {
@@ -286,11 +313,11 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
     std::string path = http.getHeader().path;
 
     BaseLib::EventHandlers eventHandlers = getEventHandlers();
-    for (BaseLib::EventHandlers::const_iterator i = eventHandlers.begin(); i != eventHandlers.end(); ++i) {
-      i->second->lock();
+    for (const auto &eventHandler: eventHandlers) {
+      eventHandler.second->lock();
       try {
-        if (i->second->handler() && ((BaseLib::Rpc::IWebserverEventSink *)i->second->handler())->onPost(_serverInfo, http, socket, path)) {
-          i->second->unlock();
+        if (eventHandler.second->handler() && ((BaseLib::Rpc::IWebserverEventSink *)eventHandler.second->handler())->onPost(_serverInfo, http, socket, path)) {
+          eventHandler.second->unlock();
           return;
         }
       }
@@ -300,25 +327,26 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
       catch (...) {
         _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
       }
-      i->second->unlock();
+      eventHandler.second->unlock();
     }
 
     if (!path.empty() && path.front() == '/') path = path.substr(1);
 
     bool isDirectory = false;
     BaseLib::Io::isDirectory(_serverInfo->contentPath + path, isDirectory);
-    if (isDirectory || path == "node-blue" || path == "node-blue/" || path == "ui" || path == "ui/" || path == "admin" || path == "admin/") {
+    if (isDirectory || path == "node-blue" || path == "node-blue/" || path == "ui" || path == "ui/" || path == "admin" || path == "admin/" || path == "web-ssh" || path == "web-ssh/") {
       if (!path.empty() && path.back() != '/') {
         path = '/' + path + '/';
         std::vector<std::string> additionalHeaders({std::string("Location: ") + path});
         getError(301, "Moved Permanently", "The document has moved <a href=\"" + path + "\">here</a>.", content, additionalHeaders);
         send(socket, content);
-        socket->close();
+        socket->Shutdown();
         return;
       }
       if (path == "node-blue/") path = "node-blue/index.php";
       else if (path.compare(0, 3, "ui/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.uiPath() + "index.hgs"))) {}
       else if (path.compare(0, 6, "admin/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.adminUiPath() + "index.hgs"))) {}
+      else if (path.compare(0, 8, "web-ssh/") == 0 && (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.hgs"))) {}
       else if (BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php")) path += "index.php";
       else if (BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php5")) path += "index.php5";
       else if (BaseLib::Io::fileExists(_serverInfo->contentPath + path + "index.php7")) path += "index.php7";
@@ -326,7 +354,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
       else {
         getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
         send(socket, content);
-        socket->close();
+        socket->Shutdown();
         return;
       }
     }
@@ -339,7 +367,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
       if (contentString == "unauthorized") {
         getError(401, _http.getStatusText(401), "You are not logged in.", content);
         send(socket, content);
-        socket->close();
+        socket->Shutdown();
         return;
       } else if (!responseHeader.empty() || !contentString.empty()) {
         if (responseHeader.empty()) {
@@ -349,15 +377,15 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
         content.insert(content.end(), responseHeader.begin(), responseHeader.end());
         content.insert(content.end(), contentString.begin(), contentString.end());
         send(socket, content);
-        socket->close();
+        socket->Shutdown();
         return;
       }
     }
 
-    if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "node-blue/index.php" && path != "node-blue/signin.php" && path.compare(0, 3, "ui/") != 0 && path.compare(0, 6, "admin/") != 0) {
+    if (!BaseLib::Io::fileExists(_serverInfo->contentPath + path) && path != "node-blue/index.php" && path != "node-blue/signin.php" && path.compare(0, 3, "ui/") != 0 && path.compare(0, 6, "admin/") != 0 && path.compare(0, 8, "web-ssh/") != 0) {
       getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
       send(socket, content);
-      socket->close();
+      socket->Shutdown();
       return;
     }
 
@@ -384,6 +412,17 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
           else path = "admin/index.hgs";
         }
       }
+    } else if (path.compare(0, 8, "web-ssh/") == 0 && path.size() > 6) {
+      if (!BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + path.substr(8))) {
+        if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php") || BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.hgs")) {
+          http.setRedirectUrl('/' + path);
+          http.setRedirectQueryString(http.getHeader().args);
+          http.setRedirectStatus(200);
+
+          if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php")) path = "web-ssh/index.php";
+          else path = "web-ssh/index.hgs";
+        }
+      }
     }
 
     try {
@@ -397,7 +436,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
         if (!BaseLib::Io::fileExists(fullPath)) {
           getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
           send(socket, content);
-          socket->close();
+          socket->Shutdown();
           return;
         }
       } else if (path == "node-blue/signin.php") {
@@ -406,7 +445,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
         if (!BaseLib::Io::fileExists(fullPath)) {
           getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
           send(socket, content);
-          socket->close();
+          socket->Shutdown();
           return;
         }
       } else if (path.compare(0, 6, "admin/") == 0) {
@@ -416,7 +455,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
           else {
             getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
             send(socket, content);
-            socket->close();
+            socket->Shutdown();
             return;
           }
         } else fullPath = GD::bl->settings.adminUiPath() + path.substr(6);
@@ -432,11 +471,23 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
           } else {
             getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
             send(socket, content);
-            socket->close();
+            socket->Shutdown();
             return;
           }
         } else fullPath = GD::bl->settings.uiPath() + path.substr(3);
         contentPath = GD::bl->settings.uiPath();
+      } else if (path.compare(0, 8, "web-ssh/") == 0) {
+        if (path == "web-ssh/") {
+          if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.php")) fullPath = GD::bl->settings.webSshPath() + "index.php";
+          else if (BaseLib::Io::fileExists(GD::bl->settings.webSshPath() + "index.hgs")) fullPath = GD::bl->settings.webSshPath() + "index.hgs";
+          else {
+            getError(404, "Not Found", "The requested URL " + path + " was not found on this server.", content);
+            send(socket, content);
+            socket->Shutdown();
+            return;
+          }
+        } else fullPath = GD::bl->settings.webSshPath() + path.substr(8);
+        contentPath = GD::bl->settings.webSshPath();
       } else fullPath = _serverInfo->contentPath + path;
       BaseLib::ScriptEngine::PScriptInfo scriptInfo(new BaseLib::ScriptEngine::ScriptInfo(BaseLib::ScriptEngine::ScriptInfo::ScriptType::web, contentPath, fullPath, relativePath, http, _serverInfo, clientInfo));
       scriptInfo->socket = socket;
@@ -446,24 +497,21 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
       if (scriptInfo->http.getHeader().acceptEncoding & BaseLib::Http::AcceptEncoding::gzip) {
         std::vector<char> newContent = BaseLib::GZip::compress<std::vector<char>, std::string>(scriptInfo->output, 5);
         try {
-          scriptInfo->socket->proofwrite(newContent.data(), newContent.size());
+          scriptInfo->socket->Send((uint8_t *)newContent.data(), newContent.size());
         }
-        catch (BaseLib::SocketDataLimitException &ex) {
-          GD::out.printWarning("Warning: " + std::string(ex.what()));
-        }
-        catch (const BaseLib::SocketOperationException &ex) {
+        catch (const C1Net::Exception &ex) {
           GD::out.printError("Error: " + std::string(ex.what()));
         }
         catch (const std::exception &ex) {
           GD::out.printError(std::string("Error: ") + ex.what());
         }
       }
-      socket->close();
+      socket->Shutdown();
     }
     catch (const std::exception &ex) {
       getError(404, _http.getStatusText(404), "The requested URL " + path + " was not found on this server.", content);
       send(socket, content);
-      socket->close();
+      socket->Shutdown();
       return;
     }
 #else
@@ -480,7 +528,7 @@ void WebServer::post(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, st
   }
 }
 
-void WebServer::put(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket) {
+void WebServer::put(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<C1Net::TcpSocket> socket) {
   try {
     if (!socket) {
       _out.printError("Error: Socket is nullptr.");
@@ -533,7 +581,7 @@ void WebServer::put(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std
   }
 }
 
-void WebServer::delete_(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<BaseLib::TcpSocket> socket) {
+void WebServer::delete_(BaseLib::PRpcClientInfo clientInfo, BaseLib::Http &http, std::shared_ptr<C1Net::TcpSocket> socket) {
   try {
     if (!socket) {
       _out.printError("Error: Socket is nullptr.");
@@ -605,7 +653,7 @@ void WebServer::getError(int32_t code, std::string codeDescription, std::string 
   }
 }
 
-void WebServer::getError(int32_t code, const std::string& codeDescription, const std::string& longDescription, std::vector<char> &content, std::vector<std::string> &additionalHeaders) {
+void WebServer::getError(int32_t code, const std::string &codeDescription, const std::string &longDescription, std::vector<char> &content, std::vector<std::string> &additionalHeaders) {
   try {
     std::string contentString =
         "<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\"><html><head><title>" + std::to_string(code) + " " + codeDescription + "</title></head><body><h1>" + codeDescription + "</h1><p>" + longDescription + "<br/></p><hr><address>Homegear "
@@ -623,16 +671,13 @@ void WebServer::getError(int32_t code, const std::string& codeDescription, const
   }
 }
 
-void WebServer::send(std::shared_ptr<BaseLib::TcpSocket> &socket, std::vector<char> &data) {
+void WebServer::send(std::shared_ptr<C1Net::TcpSocket> &socket, std::vector<char> &data) {
   try {
     if (data.empty()) return;
     try {
-      socket->proofwrite(data);
+      socket->Send((uint8_t *)data.data(), data.size());
     }
-    catch (BaseLib::SocketDataLimitException &ex) {
-      _out.printWarning("Warning: " + std::string(ex.what()));
-    }
-    catch (const BaseLib::SocketOperationException &ex) {
+    catch (const C1Net::Exception &ex) {
       _out.printInfo("Info: " + std::string(ex.what()));
     }
   }
@@ -656,7 +701,7 @@ void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, Base
 
     {
       std::lock_guard<std::mutex> sendHeaderGuard(_sendHeaderHookMutex);
-      for (auto &hook : _sendHeaderHooks) {
+      for (auto &hook: _sendHeaderHooks) {
         hook.second(scriptInfo->http, headers);
       }
     }
@@ -669,15 +714,15 @@ void WebServer::sendHeaders(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, Base
       output.append("Content-Encoding: gzip\r\n");
     }
 
-    for (auto &headerArray : *headers->structValue) {
-      for (auto &header : *headerArray.second->arrayValue) {
+    for (auto &headerArray: *headers->structValue) {
+      for (auto &header: *headerArray.second->arrayValue) {
         if (output.size() + headerArray.first.size() + header->stringValue.size() + 6 > output.capacity()) output.reserve(output.capacity() + 1024 + headerArray.first.size() + header->stringValue.size() + 6);
         output.append(headerArray.first + ": " + header->stringValue + "\r\n");
       }
     }
 
     output.append("\r\n");
-    scriptInfo->socket->proofwrite(output.c_str(), output.size());
+    scriptInfo->socket->Send((uint8_t *)output.c_str(), output.size());
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -694,7 +739,7 @@ void WebServer::sendOutput(BaseLib::ScriptEngine::PScriptInfo &scriptInfo, std::
     if (scriptInfo->http.getHeader().acceptEncoding & BaseLib::Http::AcceptEncoding::gzip) {
       if (scriptInfo->output.size() + output.size() > scriptInfo->output.capacity()) scriptInfo->output.reserve(scriptInfo->output.capacity() + (((output.size() / 1024) + 1) * 1024));
       scriptInfo->output.append(output);
-    } else scriptInfo->socket->proofwrite(output.c_str(), output.size());
+    } else scriptInfo->socket->Send((uint8_t *)output.c_str(), output.size());
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

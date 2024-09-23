@@ -1650,6 +1650,15 @@ class RPCSetRoomMetadata : public BaseLib::Rpc::RpcMethod {
   BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
 };
 
+class RPCSetSerialNumber : public BaseLib::Rpc::RpcMethod {
+ public:
+  RPCSetSerialNumber() {
+    addSignature(BaseLib::VariableType::tVoid, std::vector<BaseLib::VariableType>{BaseLib::VariableType::tInteger, BaseLib::VariableType::tString});
+  }
+
+  BaseLib::PVariable invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) override;
+};
+
 class RPCSetStoryMetadata : public BaseLib::Rpc::RpcMethod {
  public:
   RPCSetStoryMetadata() {

@@ -120,12 +120,12 @@ BaseLib::PVariable RPCSystemListMethods::invoke(BaseLib::PRpcClientInfo clientIn
     auto methods = GD::rpcServers.begin()->second->getMethods();
     auto ipcMethods = GD::ipcServer->getRpcMethods();
     methodInfo->arrayValue->reserve(methods->size() + ipcMethods.size());
-    for (auto &method : *methods) {
+    for (auto &method: *methods) {
       if (clientInfo->acls->checkMethodAccess(method.first)) {
         methodInfo->arrayValue->push_back(BaseLib::PVariable(new BaseLib::Variable(method.first)));
       }
     }
-    for (auto &method : ipcMethods) {
+    for (auto &method: ipcMethods) {
       if (clientInfo->acls->checkMethodAccess(method.first)) {
         methodInfo->arrayValue->push_back(std::make_shared<BaseLib::Variable>(method.first));
       }
@@ -627,7 +627,7 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
         auto roleMetadata = GD::bl->db->getRoleMetadata(currentRoleId);
         auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
         if (addVariablesIterator != roleMetadata->structValue->end()) {
-          for (auto &variableInfo : *addVariablesIterator->second->arrayValue) {
+          for (auto &variableInfo: *addVariablesIterator->second->arrayValue) {
             auto idIterator = variableInfo->structValue->find("id");
             auto typeIterator = variableInfo->structValue->find("type");
             if (idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty()
@@ -665,7 +665,7 @@ BaseLib::PVariable RPCAddRoleToVariable::invoke(BaseLib::PRpcClientInfo clientIn
 
             auto rolesIterator = variableInfo->structValue->find("roles");
             if (rolesIterator != variableInfo->structValue->end()) {
-              for (auto &role : *rolesIterator->second->arrayValue) {
+              for (auto &role: *rolesIterator->second->arrayValue) {
                 if (role->integerValue64 != 0)
                   roleSystemVariable->roles.emplace(role->integerValue64,
                                                     BaseLib::Role(role->integerValue64,
@@ -1252,7 +1252,7 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
       auto roleMetadata = GD::bl->db->getRoleMetadata(currentRoleId);
       auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
       if (addVariablesIterator != roleMetadata->structValue->end()) {
-        for (auto &variableInfo : *addVariablesIterator->second->arrayValue) {
+        for (auto &variableInfo: *addVariablesIterator->second->arrayValue) {
           auto idIterator = variableInfo->structValue->find("id");
           auto typeIterator = variableInfo->structValue->find("type");
           if (idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty()
@@ -1286,7 +1286,7 @@ BaseLib::PVariable RPCAddRoleToSystemVariable::invoke(BaseLib::PRpcClientInfo cl
 
           auto rolesIterator = variableInfo->structValue->find("roles");
           if (rolesIterator != variableInfo->structValue->end()) {
-            for (auto &role : *rolesIterator->second->arrayValue) {
+            for (auto &role: *rolesIterator->second->arrayValue) {
               if (role->integerValue64 != 0)
                 roleSystemVariable->roles.emplace(role->integerValue64,
                                                   BaseLib::Role(role->integerValue64,
@@ -1819,7 +1819,7 @@ BaseLib::PVariable RPCCreateDevice::invoke(BaseLib::PRpcClientInfo clientInfo, B
 
     if (parameters->size() == 1) {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (auto &family : families) {
+      for (auto &family: families) {
         auto central = family.second->getCentral();
         if (!central) continue;
         auto result = central->createDevice(clientInfo, parameters->at(0)->stringValue);
@@ -1969,8 +1969,8 @@ BaseLib::PVariable RPCDeleteCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
       std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
       if (central) {
         BaseLib::PVariable devices = central->getChannelsInCategory(clientInfo, categoryId, false);
-        for (auto &device : *devices->structValue) {
-          for (auto &channel : *device.second->arrayValue) {
+        for (auto &device: *devices->structValue) {
+          for (auto &channel: *device.second->arrayValue) {
             central->removeCategoryFromChannel(clientInfo,
                                                (uint64_t)BaseLib::Math::getNumber64(device.first, false),
                                                channel->integerValue,
@@ -1979,7 +1979,7 @@ BaseLib::PVariable RPCDeleteCategory::invoke(BaseLib::PRpcClientInfo clientInfo,
         }
 
         auto peers = central->getPeers();
-        for (auto &peer : peers) {
+        for (auto &peer: peers) {
           peer->removeCategoryFromVariables(categoryId);
         }
       }
@@ -2208,7 +2208,7 @@ BaseLib::PVariable RPCDeleteRole::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
       std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
       if (central) {
         auto peers = central->getPeers();
-        for (auto &peer : peers) {
+        for (auto &peer: peers) {
           peer->removeRoleFromVariables(roleId);
         }
       }
@@ -2247,8 +2247,8 @@ BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
       std::shared_ptr<BaseLib::Systems::ICentral> central = i->second->getCentral();
       if (central) {
         BaseLib::PVariable devices = central->getChannelsInRoom(clientInfo, roomId, false);
-        for (auto &device : *devices->structValue) {
-          for (auto &channel : *device.second->arrayValue) {
+        for (auto &device: *devices->structValue) {
+          for (auto &channel: *device.second->arrayValue) {
             central->removeChannelFromRoom(clientInfo,
                                            (uint64_t)BaseLib::Math::getNumber64(device.first, false),
                                            channel->integerValue,
@@ -2257,7 +2257,7 @@ BaseLib::PVariable RPCDeleteRoom::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
         }
 
         auto peers = central->getPeers();
-        for (auto &peer : peers) {
+        for (auto &peer: peers) {
           peer->removeRoomFromVariables(roomId);
         }
       }
@@ -3051,7 +3051,7 @@ BaseLib::PVariable RPCGetDeviceDescription::invoke(BaseLib::PRpcClientInfo clien
                                             "Unauthorized. Device, category or room ACLs are set for this client. Usage of serial numbers to address devices is not allowed.");
 
     if (fieldsIndex != -1) {
-      for (auto field : *(parameters->at(fieldsIndex)->arrayValue)) {
+      for (auto field: *(parameters->at(fieldsIndex)->arrayValue)) {
         if (field->stringValue.empty()) continue;
         fields[field->stringValue] = true;
       }
@@ -3283,7 +3283,7 @@ BaseLib::PVariable RPCGetLastEvents::invoke(BaseLib::PRpcClientInfo clientInfo, 
     if (error != ParameterError::Enum::noError) return getError(error);
 
     std::set<uint64_t> ids;
-    for (auto &id : *parameters->at(0)->arrayValue) {
+    for (auto &id: *parameters->at(0)->arrayValue) {
       ids.insert(id->integerValue64);
     }
 
@@ -4489,7 +4489,7 @@ BaseLib::PVariable RPCGetServiceMessages::invoke(BaseLib::PRpcClientInfo clientI
     }
 
     std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-    for (auto &family : families) {
+    for (auto &family: families) {
       std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
       if (!central) continue;
       BaseLib::PVariable messages = central->getServiceMessages(clientInfo, id, language, checkAcls);
@@ -5123,7 +5123,7 @@ BaseLib::PVariable RPCGetVariableDescription::invoke(BaseLib::PRpcClientInfo cli
 
     std::unordered_set<std::string> fields;
     if (parameters->size() == 4) {
-      for (auto &field : *parameters->at(3)->arrayValue) {
+      for (auto &field: *parameters->at(3)->arrayValue) {
         fields.emplace(field->stringValue);
       }
     }
@@ -5348,8 +5348,8 @@ BaseLib::PVariable RPCInit::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::
           clientInfo->clientType = BaseLib::RpcClientType::ccu2;
           eventServer->reconnectInfinitely = true;
           if (eventServer->socket) {
-            eventServer->socket->setReadTimeout(30000000);
-            eventServer->socket->setWriteTimeout(30000000);
+            eventServer->socket->SetReadTimeout(30000000);
+            eventServer->socket->SetWriteTimeout(30000000);
           }
         }
           // }}}
@@ -5460,7 +5460,7 @@ BaseLib::PVariable RPCLifetick::invoke(BaseLib::PRpcClientInfo clientInfo, BaseL
       return std::make_shared<BaseLib::Variable>(false);
     }
 
-    for (auto &server : GD::rpcServers) {
+    for (auto &server: GD::rpcServers) {
       if (!server.second->lifetick()) {
         GD::out.printCritical(
             "Critical: RPC Server lifetick (Port " + std::to_string(server.second->getInfo()->port) + "): Failed");
@@ -5721,7 +5721,7 @@ BaseLib::PVariable RPCListKnownDeviceTypes::invoke(BaseLib::PRpcClientInfo clien
     channels = parameters->size() == 3 ? parameters->at(1)->booleanValue : parameters->at(0)->booleanValue;
     if (parameters->size() >= 2) {
       BaseLib::PArray &array = parameters->size() == 3 ? parameters->at(2)->arrayValue : parameters->at(1)->arrayValue;
-      for (auto element : *array) {
+      for (auto element: *array) {
         if (element->stringValue.empty()) continue;
         fields.insert(element->stringValue);
       }
@@ -5849,7 +5849,7 @@ BaseLib::PVariable RPCPeerExists::invoke(BaseLib::PRpcClientInfo clientInfo, Bas
       return std::make_shared<BaseLib::Variable>(central->peerExists((uint64_t)parameters->at(1)->integerValue64));
     } else {
       std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
-      for (auto &family : families) {
+      for (auto &family: families) {
         auto central = family.second->getCentral();
         if (!central) continue;
 
@@ -6476,7 +6476,7 @@ BaseLib::PVariable RPCRemoveRoleFromSystemVariable::invoke(BaseLib::PRpcClientIn
     auto roleMetadata = GD::bl->db->getRoleMetadata(parameters->at(1)->integerValue64);
     auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
     if (addVariablesIterator != roleMetadata->structValue->end()) {
-      for (auto &variableInfo : *addVariablesIterator->second->arrayValue) {
+      for (auto &variableInfo: *addVariablesIterator->second->arrayValue) {
         auto idIterator = variableInfo->structValue->find("id");
         if (idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty()) {
           continue;
@@ -6546,7 +6546,7 @@ BaseLib::PVariable RPCRemoveRoleFromVariable::invoke(BaseLib::PRpcClientInfo cli
       auto roleMetadata = GD::bl->db->getRoleMetadata(parameters->at(3)->integerValue64);
       auto addVariablesIterator = roleMetadata->structValue->find("addVariables");
       if (addVariablesIterator != roleMetadata->structValue->end()) {
-        for (auto &variableInfo : *addVariablesIterator->second->arrayValue) {
+        for (auto &variableInfo: *addVariablesIterator->second->arrayValue) {
           auto idIterator = variableInfo->structValue->find("id");
           if (idIterator == variableInfo->structValue->end() || idIterator->second->stringValue.empty()) {
             continue;
@@ -7135,7 +7135,7 @@ BaseLib::PVariable RPCSetGlobalServiceMessage::invoke(BaseLib::PRpcClientInfo cl
     if (error != ParameterError::Enum::noError) return getError(error);
 
     std::list<std::string> variables;
-    for (auto &element : *parameters->at(7)->arrayValue) {
+    for (auto &element: *parameters->at(7)->arrayValue) {
       variables.emplace_back(element->stringValue);
     }
 
@@ -7697,6 +7697,55 @@ BaseLib::PVariable RPCSetRoomMetadata::invoke(BaseLib::PRpcClientInfo clientInfo
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
+BaseLib::PVariable RPCSetSerialNumber::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
+  try {
+    if (!clientInfo || !clientInfo->acls->checkMethodAccess("setSerialNumbe"))
+      return BaseLib::Variable::createError(-32603, "Unauthorized.");
+    bool checkAcls = clientInfo->acls->buildingPartsRoomsCategoriesRolesDevicesWriteSet();
+
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
+                                                                                                                 std::vector<BaseLib::VariableType>({BaseLib::VariableType::tInteger, BaseLib::VariableType::tString})
+                                                                                                             }));
+    if (error != ParameterError::Enum::noError) return getError(error);
+
+    std::map<int32_t, std::shared_ptr<BaseLib::Systems::DeviceFamily>> families = GD::familyController->getFamilies();
+
+    for (auto &family: families) {
+      std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
+      if (central && central->peerExists(parameters->at(1)->stringValue)) {
+        return BaseLib::Variable::createError(101, "New serial number is already in use.");
+      }
+
+      //Double check and also check in database
+      if (GD::bl->db->peerExists(parameters->at(1)->stringValue))
+        return BaseLib::Variable::createError(101, "New serial number is already in use.");
+    }
+
+    for (auto &family: families) {
+      std::shared_ptr<BaseLib::Systems::ICentral> central = family.second->getCentral();
+      if (central && central->peerExists((uint64_t)parameters->at(0)->integerValue64)) {
+        if (checkAcls) {
+          auto peer = central->getPeer((uint64_t)parameters->at(0)->integerValue64);
+          if (!peer || !clientInfo->acls->checkDeviceWriteAccess(peer)) {
+            return BaseLib::Variable::createError(-32603, "Unauthorized.");
+          }
+        }
+
+        return central->setSerialNumber(clientInfo, (uint64_t)parameters->at(0)->integerValue64, parameters->at(1)->stringValue);
+      }
+    }
+
+    return BaseLib::Variable::createError(-2, "Device not found.");
+  }
+  catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  catch (...) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
 BaseLib::PVariable RPCSetStoryMetadata::invoke(BaseLib::PRpcClientInfo clientInfo, BaseLib::PArray parameters) {
   try {
     ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
@@ -8108,17 +8157,11 @@ BaseLib::PVariable RPCSubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo,
     if (!clientInfo || !clientInfo->acls->checkMethodAccess("subscribePeers"))
       return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({
-                                                                                                                 std::vector<
-                                                                                                                     BaseLib::VariableType>(
-                                                                                                                     {BaseLib::VariableType::tString,
-                                                                                                                      BaseLib::VariableType::tArray})
-                                                                                                             }));
+    ParameterError::Enum error = checkParameters(parameters, std::vector<std::vector<BaseLib::VariableType>>({std::vector<BaseLib::VariableType>({BaseLib::VariableType::tString, BaseLib::VariableType::tArray})}));
     if (error != ParameterError::Enum::noError) return getError(error);
 
     if (parameters->at(0)->stringValue.empty()) return BaseLib::Variable::createError(-32602, "Server id is empty.");
-    std::pair<std::string, std::string>
-        server = BaseLib::HelperFunctions::splitLast(parameters->at(0)->stringValue, ':');
+    std::pair<std::string, std::string> server = BaseLib::HelperFunctions::splitLast(parameters->at(0)->stringValue, ':');
     BaseLib::HelperFunctions::toLower(server.first);
 
     int32_t pos = server.second.find_first_of('/');
@@ -8129,9 +8172,7 @@ BaseLib::PVariable RPCSubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo,
     if (!server.second.empty()) //Port number specified
     {
       server.second = std::to_string(BaseLib::Math::getNumber(server.second));
-      if (server.second.empty() || server.second == "0")
-        return BaseLib::Variable::createError(-32602,
-                                              "Port number is invalid.");
+      if (server.second.empty() || server.second == "0") return BaseLib::Variable::createError(-32602, "Port number is invalid.");
     }
 
     std::shared_ptr<RemoteRpcServer> eventServer = GD::rpcClient->getServer(server);
@@ -8141,7 +8182,7 @@ BaseLib::PVariable RPCSubscribePeers::invoke(BaseLib::PRpcClientInfo clientInfo,
       if ((*i)->integerValue64 != 0) eventServer->subscribedPeers.insert((*i)->integerValue64);
     }
 
-    return BaseLib::PVariable(new BaseLib::Variable(BaseLib::VariableType::tVoid));
+    return std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tVoid);
   }
   catch (const std::exception &ex) {
     GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());

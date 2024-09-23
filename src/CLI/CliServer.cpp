@@ -75,7 +75,7 @@ std::string CliServer::userCommand(std::string &command) {
 
       auto groups = GD::bl->db->getGroups("en");
       if (groups->arrayValue->empty()) groups = GD::bl->db->getGroups("en-US"); //Backwards compatibility
-      for (auto &group : *groups->arrayValue) {
+      for (auto &group: *groups->arrayValue) {
         auto nameIterator = group->structValue->find("NAME");
         if (nameIterator == group->structValue->end()) continue;
 
@@ -175,9 +175,9 @@ std::string CliServer::userCommand(std::string &command) {
 
       stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(100) << "Name"
                    << "Groups" << std::endl;
-      for (auto &user : users) {
+      for (auto &user: users) {
         stringStream << std::setw(6) << user.first << std::setw(100) << user.second.name;
-        for (auto &group : user.second.groups) {
+        for (auto &group: user.second.groups) {
           stringStream << group << " ";
         }
         stringStream << std::endl;
@@ -238,7 +238,7 @@ std::string CliServer::userCommand(std::string &command) {
         groupString = groupString.substr(1, groupString.size() - 2);
         std::vector<std::string> splitGroupString = BaseLib::HelperFunctions::splitAll(groupString, ',');
         groups.reserve(splitGroupString.size());
-        for (auto &element : splitGroupString) {
+        for (auto &element: splitGroupString) {
           BaseLib::HelperFunctions::trim(element);
           uint64_t id = BaseLib::Math::getNumber64(element, false);
           if (id != 0) groups.push_back(id);
@@ -301,7 +301,7 @@ std::string CliServer::userCommand(std::string &command) {
           groupString = groupString.substr(1, groupString.size() - 2);
           std::vector<std::string> splitGroupString = BaseLib::HelperFunctions::splitAll(groupString, ',');
           groups.reserve(splitGroupString.size());
-          for (auto &element : splitGroupString) {
+          for (auto &element: splitGroupString) {
             BaseLib::HelperFunctions::trim(element);
             uint64_t id = BaseLib::Math::getNumber64(element, false);
             if (id != 0) groups.push_back(id);
@@ -406,7 +406,7 @@ std::string CliServer::moduleCommand(std::string &command) {
       stringStream << std::left << std::setfill(' ') << std::setw(6) << "ID" << std::setw(30) << "Family Name"
                    << std::setw(30) << "Filename" << std::setw(14) << "Compiled For" << std::setw(7) << "Loaded"
                    << std::endl;
-      for (auto &module : modules) {
+      for (auto &module: modules) {
         stringStream << std::setw(6) << module->familyId << std::setw(30) << module->familyName << std::setw(30)
                      << module->filename << std::setw(14) << module->baselibVersion << std::setw(7)
                      << (module->loaded ? "true" : "false") << std::endl;
@@ -557,7 +557,9 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       stringStream << "rpcservers (rpc)     Lists all active RPC servers" << std::endl;
       stringStream << "rpcclients (rcl)     Lists all active RPC clients" << std::endl;
       stringStream << "reloadroles (rrl)    Delete all roles and recreate them from \"defaultRoles.json\"." << std::endl;
-      stringStream << "threads              Prints current thread count" << std::endl;
+      stringStream << "threads              Prints the current thread count" << std::endl;
+      stringStream << "load (ld)            Prints the current load" << std::endl;
+      stringStream << "nodeproctimes (npt)  Prints the time required for every node input to process incoming data" << std::endl;
       stringStream << "slavemode (sm)       Enables slave mode when in a master/slave installation" << std::endl;
 #ifndef NO_SCRIPTENGINE
       stringStream << "runscript (rs)       Executes a script with the internal PHP engine" << std::endl;
@@ -583,12 +585,6 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       GD::scriptEngineServer->devTestClient();
 #endif
       stringStream << "Done." << std::endl;
-      return std::make_shared<BaseLib::Variable>(stringStream.str());
-    }
-      //Todo: Deprecated. Remove beginning of 2021.
-    else if (BaseLib::HelperFunctions::checkCliCommand(command, "disconnect", "dcr", "", 0, arguments, showHelp)) {
-      GD::rpcClient->disconnectRega();
-      stringStream << "RegaHss socket closed." << std::endl;
       return std::make_shared<BaseLib::Variable>(stringStream.str());
     } else if (BaseLib::HelperFunctions::checkCliCommand(command, "debuglevel", "dl", "", 1, arguments, showHelp)) {
       int32_t debugLevel = 3;
@@ -659,8 +655,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       std::unique_lock<std::mutex> waitLock(_waitMutex);
       int64_t startTime = BaseLib::HelperFunctions::getTime();
       while (!_waitConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&] {
-        if (BaseLib::HelperFunctions::getTime() - startTime > 300000) return true;
-        else return _scriptFinished;
+        return _scriptFinished;
       }));
 
       auto output = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -702,8 +697,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       std::unique_lock<std::mutex> waitLock(_waitMutex);
       int64_t startTime = BaseLib::HelperFunctions::getTime();
       while (!_waitConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&] {
-        if (BaseLib::HelperFunctions::getTime() - startTime > 300000) return true;
-        else return _scriptFinished;
+        return _scriptFinished;
       }));
 
       auto output = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
@@ -732,7 +726,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
 
       stringStream << std::left << std::setfill(' ') << std::setw(10) << "PID" << std::setw(10) << "Peer ID"
                    << std::setw(17) << "Node ID" << std::setw(10) << "Script ID" << std::setw(80) << "Filename" << std::endl;
-      for (auto &script : runningScripts) {
+      for (auto &script: runningScripts) {
         stringStream << std::setw(10) << std::get<0>(script) << std::setw(10)
                      << (std::get<1>(script) > 0 ? std::to_string(std::get<1>(script)) : "") << std::setw(17)
                      << std::get<2>(script) << std::setw(10) << std::get<3>(script) << std::setw(80) << std::get<4>(script) << std::endl;
@@ -819,7 +813,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       int32_t websocketWidth = 10;
 
       //Safe to use without mutex
-      for (auto &server : GD::rpcServers) {
+      for (auto &server: GD::rpcServers) {
         if (!server.second->isRunning()) continue;
         const BaseLib::Rpc::PServerInfo settings = server.second->getInfo();
         const std::vector<BaseLib::PRpcClientInfo> clients = server.second->getClientInfo();
@@ -927,7 +921,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
                    << std::endl;
 
       //Safe to use without mutex
-      for (auto &server : GD::rpcServers) {
+      for (auto &server: GD::rpcServers) {
         if (!server.second->isRunning()) continue;
         const BaseLib::Rpc::PServerInfo settings = server.second->getInfo();
         std::string name = settings->name;
@@ -957,6 +951,15 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
                    << GD::bl->threadManager.getMaxThreadCount() << std::endl
                    << "Maximum thread count since start: " << GD::bl->threadManager.getMaxRegisteredThreadCount()
                    << std::endl;
+      return std::make_shared<BaseLib::Variable>(stringStream.str());
+    } else if (BaseLib::HelperFunctions::checkCliCommand(command, "load", "ld", "", 0, arguments, showHelp)) {
+      auto load1 = GD::scriptEngineServer->getLoad();
+      auto load2 = GD::nodeBlueServer->getLoad();
+      load1->structValue->insert(load2->structValue->begin(), load2->structValue->end());
+      stringStream << BaseLib::Rpc::JsonEncoder::encode(GD::nodeBlueServer->getLoad()) << std::endl;
+      return std::make_shared<BaseLib::Variable>(stringStream.str());
+    } else if (BaseLib::HelperFunctions::checkCliCommand(command, "nodeproctimes", "npt", "", 0, arguments, showHelp)) {
+      stringStream << BaseLib::Rpc::JsonEncoder::encode(GD::nodeBlueServer->getNodeProcessingTimes()) << std::endl;
       return std::make_shared<BaseLib::Variable>(stringStream.str());
     } else if (BaseLib::HelperFunctions::checkCliCommand(command, "slavemode", "sm", "", 1, arguments, showHelp)) {
       if (showHelp) {
@@ -989,7 +992,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
           stringStream << "RPC Client: Failed" << std::endl;
           exitCode = 1;
         } else stringStream << "RPC Client: OK" << std::endl;
-        for (auto &server : GD::rpcServers) {
+        for (auto &server: GD::rpcServers) {
           if (!server.second->lifetick()) {
             stringStream << "RPC Server (Port " << server.second->getInfo()->port << "): Failed"
                          << std::endl;
@@ -1028,7 +1031,7 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
                    << std::endl;
       stringStream << "──────┼───────────────────────────────" << std::endl;
       auto families = GD::familyController->getFamilies();
-      for (auto &family : families) {
+      for (auto &family: families) {
         if (family.first == -1) continue;
         std::string name = family.second->getName();
         name.resize(nameWidth, ' ');
@@ -1070,7 +1073,7 @@ std::string CliServer::peerCommand(uint64_t peerId, std::string &command) {
     if (command.empty()) return "";
 
     auto families = GD::familyController->getFamilies();
-    for (auto &family : families) {
+    for (auto &family: families) {
       auto central = family.second->getCentral();
       if (!central) continue;
 

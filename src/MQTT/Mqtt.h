@@ -161,7 +161,7 @@ class Mqtt : public BaseLib::IQueue {
   std::string _clientName;
   std::unique_ptr<BaseLib::Rpc::JsonEncoder> _jsonEncoder;
   std::unique_ptr<BaseLib::Rpc::JsonDecoder> _jsonDecoder;
-  std::unique_ptr<BaseLib::TcpSocket> _socket;
+  std::unique_ptr<C1Net::TcpSocket> _socket;
   std::thread _pingThread;
   std::thread _listenThread;
   std::atomic_bool _reconnecting;

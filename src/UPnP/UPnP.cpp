@@ -83,7 +83,7 @@ void UPnP::stop() {
     GD::bl->threadManager.join(_listenThread);
     sendByebye();
     _packets.clear();
-    for (auto &server : GD::rpcServers) {
+    for (auto &server: GD::rpcServers) {
       server.second->removeWebserverEventHandler(_webserverEventHandler);
     }
   }
@@ -250,7 +250,7 @@ void UPnP::getDescription(int32_t port, std::vector<char> &output) {
 }
 
 std::string UPnP::getUuid() const {
-    return _st;
+  return _st;
 }
 
 void UPnP::registerServers() {
@@ -262,7 +262,7 @@ void UPnP::registerServers() {
     }
 
     _packets.clear();
-    for (auto &server : GD::rpcServers) {
+    for (auto &server: GD::rpcServers) {
       BaseLib::Rpc::PServerInfo settings = server.second->getInfo();
       if (settings->ssl || settings->authType != BaseLib::Rpc::ServerInfo::Info::AuthType::none || !settings->webServer) continue;
       if (_webserverEventHandler) server.second->removeWebserverEventHandler(_webserverEventHandler);
@@ -404,7 +404,7 @@ std::shared_ptr<BaseLib::FileDescriptor> UPnP::getSocketDescriptor() {
       return std::shared_ptr<BaseLib::FileDescriptor>();
     }
     if (_address.empty()) return std::shared_ptr<BaseLib::FileDescriptor>();
-    auto socketDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_INET, SOCK_DGRAM, 0));
+    auto socketDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_INET, SOCK_DGRAM | SOCK_CLOEXEC, 0));
     if (socketDescriptor->descriptor == -1) {
       _out.printError("Error: Could not create socket.");
       return std::shared_ptr<BaseLib::FileDescriptor>();
@@ -459,7 +459,7 @@ std::shared_ptr<BaseLib::FileDescriptor> UPnP::getSocketDescriptor() {
 }
 
 // {{{ Webserver events
-bool UPnP::onGet(BaseLib::Rpc::PServerInfo &serverInfo, BaseLib::Http &httpRequest, std::shared_ptr<BaseLib::TcpSocket> &socket, std::string &path) {
+bool UPnP::onGet(BaseLib::Rpc::PServerInfo &serverInfo, BaseLib::Http &httpRequest, std::shared_ptr<C1Net::TcpSocket> &socket, std::string &path) {
   if (_stopServer) return false;
   if (GD::bl->settings.enableUPnP() && path == "/description.xml") {
     std::vector<char> content;
@@ -472,15 +472,12 @@ bool UPnP::onGet(BaseLib::Rpc::PServerInfo &serverInfo, BaseLib::Http &httpReque
       try {
         //Sleep a tiny little bit. Some clients don't accept responses too fast.
         std::this_thread::sleep_for(std::chrono::milliseconds(22));
-        socket->proofwrite(content);
+        socket->Send((uint8_t *)content.data(), content.size());
       }
-      catch (BaseLib::SocketDataLimitException &ex) {
-        _out.printWarning("Warning: " + std::string(ex.what()));
-      }
-      catch (const BaseLib::SocketOperationException &ex) {
+      catch (const C1Net::Exception &ex) {
         _out.printError("Error: " + std::string(ex.what()));
       }
-      socket->close();
+      socket->Shutdown();
       return true;
     }
   }

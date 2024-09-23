@@ -47,10 +47,10 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _out.init(GD::bl.get());
   _out.setPrefix("IPC Server: ");
 
-  _lifetick1.first = 0;
-  _lifetick1.second = true;
-  _lifetick2.first = 0;
-  _lifetick2.second = true;
+  lifetick_1_.first = 0;
+  lifetick_1_.second = true;
+  lifetick_2_.first = 0;
+  lifetick_2_.second = true;
 
   _rpcDecoder = std::make_unique<BaseLib::Rpc::RpcDecoder>(GD::bl.get(), false, false);
   _rpcEncoder = std::make_unique<BaseLib::Rpc::RpcEncoder>(GD::bl.get(), true, true);
@@ -154,6 +154,7 @@ IpcServer::IpcServer() : IQueue(GD::bl.get(), 3, 100000) {
   _rpcMethods.emplace("setFlowData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetFlowData()));
   _rpcMethods.emplace("setGlobalData", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetGlobalData()));
   _rpcMethods.emplace("setNodeVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new RpcMethods::RPCSetNodeVariable()));
+  _rpcMethods.emplace("setSerialNumber", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSerialNumber()));
   _rpcMethods.emplace("setSystemVariable", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetSystemVariable()));
   _rpcMethods.emplace("setTeam", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetTeam()));
   _rpcMethods.emplace("setValue", std::shared_ptr<BaseLib::Rpc::RpcMethod>(new Rpc::RPCSetValue()));
@@ -412,19 +413,40 @@ IpcServer::~IpcServer() {
   if (!_stopServer) stop();
 }
 
+std::vector<PIpcClientData> IpcServer::GetClientsForRpcMethod(const std::string &rpc_method) {
+  try {
+    std::vector<PIpcClientData> clientData;
+
+    {
+      std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
+      auto clientIterator = _clientsByRpcMethods.find(rpc_method);
+      if (clientIterator == _clientsByRpcMethods.end()) {
+        return {};
+      }
+      clientData.reserve(clientIterator->second.second.size());
+      for (auto &client : clientIterator->second.second) {
+        clientData.push_back(client.second);
+      }
+    }
+
+    return clientData;
+  } catch (const std::exception &ex) {
+    GD::out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return {};
+}
+
 bool IpcServer::lifetick() {
   try {
     {
-      std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
-      if (!_lifetick1.second && BaseLib::HelperFunctions::getTime() - _lifetick1.first > 120000) {
+      if (!lifetick_1_.second && BaseLib::HelperFunctions::getTime() - lifetick_1_.first > 120000) {
         GD::out.printCritical("Critical: RPC server's lifetick 1 was not updated for more than 120 seconds.");
         return false;
       }
     }
 
     {
-      std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
-      if (!_lifetick2.second && BaseLib::HelperFunctions::getTime() - _lifetick2.first > 120000) {
+      if (!lifetick_2_.second && BaseLib::HelperFunctions::getTime() - lifetick_2_.first > 120000) {
         GD::out.printCritical("Critical: RPC server's lifetick 2 was not updated for more than 120 seconds.");
         return false;
       }
@@ -550,6 +572,23 @@ void IpcServer::homegearShuttingDown() {
   }
 }
 
+std::string IpcServer::generateWebSshToken() {
+  try {
+    auto clientData = GetClientsForRpcMethod("websshInput");
+    if (clientData.empty()) return "";
+
+    auto parameters = std::make_shared<BaseLib::Array>();
+    BaseLib::PVariable result = sendRequest(clientData.front(), "websshGenerateToken", parameters);
+
+    if (result->errorStruct) _out.printError("Error generating web SSH token: " + result->structValue->at("faultString")->stringValue);
+    return result->stringValue;
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
+  }
+  return "";
+}
+
 void IpcServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel, std::shared_ptr<std::vector<std::string>> &variables, BaseLib::PArray &values) {
   try {
     if (_shuttingDown) return;
@@ -567,7 +606,7 @@ void IpcServer::broadcastEvent(std::string &source, uint64_t id, int32_t channel
       if (!peer) return;
 
       std::shared_ptr<std::vector<std::string>> newVariables;
-      BaseLib::PArray newValues;
+      BaseLib::PArray newValues = std::make_shared<BaseLib::Array>();
       newVariables->reserve(variables->size());
       newValues->reserve(values->size());
       for (int32_t i = 0; i < (int32_t)variables->size(); i++) {
@@ -977,19 +1016,8 @@ BaseLib::PVariable IpcServer::callRpcMethod(const BaseLib::PRpcClientInfo &clien
   try {
     if (!clientInfo || !clientInfo->acls->checkMethodAccess(methodName)) return BaseLib::Variable::createError(-32603, "Unauthorized.");
 
-    std::vector<PIpcClientData> clientData;
-    {
-      std::lock_guard<std::mutex> clientsGuard(_clientsByRpcMethodsMutex);
-      auto clientIterator = _clientsByRpcMethods.find(methodName);
-      if (clientIterator == _clientsByRpcMethods.end()) {
-        _out.printError("Warning: RPC method not found: " + methodName);
-        return BaseLib::Variable::createError(-32601, "Requested method not found.");
-      }
-      clientData.reserve(clientIterator->second.second.size());
-      for (auto &client : clientIterator->second.second) {
-        clientData.push_back(client.second);
-      }
-    }
+    auto clientData = GetClientsForRpcMethod(methodName);
+    if (clientData.empty()) return BaseLib::Variable::createError(-32601, "Requested method not found.");
 
     BaseLib::PVariable responses;
     BaseLib::PVariable responseStruct;
@@ -1057,7 +1085,7 @@ void IpcServer::processQueueEntry(int32_t index, std::shared_ptr<BaseLib::IQueue
         if (methodIterator == _rpcMethods.end()) {
           if (GD::bl->hgdc && methodName.compare(0, 4, "hgdc") == 0) {
             auto hgdcMethodName = methodName.substr(4);
-            hgdcMethodName.at(0) = std::tolower(hgdcMethodName.at(0));
+            hgdcMethodName.at(0) = (char)(uint8_t)std::tolower(hgdcMethodName.at(0));
             auto result = GD::bl->hgdc->invoke(hgdcMethodName, parameters->at(2)->arrayValue);
             sendResponse(queueEntry->clientData, parameters->at(0), parameters->at(1), result);
             return;
@@ -1145,11 +1173,13 @@ BaseLib::PVariable IpcServer::send(const PIpcClientData &clientData, const std::
 
 BaseLib::PVariable IpcServer::sendRequest(const PIpcClientData &clientData, const std::string &methodName, const BaseLib::PArray &parameters) {
   try {
-    {
-      std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
-      _lifetick1.second = false;
-      _lifetick1.first = BaseLib::HelperFunctions::getTime();
+    if (methodName.empty() || !clientData) {
+      _out.printError("Error: Invalid input to sendRequest().");
+      return BaseLib::Variable::createError(-32500, "Unknown application error.");
     }
+
+    lifetick_1_.first = BaseLib::HelperFunctions::getTime();
+    lifetick_1_.second = false;
 
     int32_t packetId;
     {
@@ -1177,6 +1207,8 @@ BaseLib::PVariable IpcServer::sendRequest(const PIpcClientData &clientData, cons
     if (result->errorStruct) {
       std::lock_guard<std::mutex> responseGuard(clientData->rpcResponsesMutex);
       clientData->rpcResponses.erase(packetId);
+
+      lifetick_1_.second = true;
       return result;
     }
 
@@ -1205,11 +1237,7 @@ BaseLib::PVariable IpcServer::sendRequest(const PIpcClientData &clientData, cons
       clientData->rpcResponses.erase(packetId);
     }
 
-    {
-      std::lock_guard<std::mutex> lifetick1Guard(_lifetick1Mutex);
-      _lifetick1.second = true;
-    }
-
+    lifetick_1_.second = true;
     return result;
   }
   catch (const std::exception &ex) {
@@ -1218,27 +1246,20 @@ BaseLib::PVariable IpcServer::sendRequest(const PIpcClientData &clientData, cons
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
+  lifetick_1_.second = true;
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }
 
 void IpcServer::sendResponse(PIpcClientData &clientData, BaseLib::PVariable &threadId, BaseLib::PVariable &packetId, BaseLib::PVariable &variable) {
   try {
-    {
-      std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
-      _lifetick2.second = false;
-      _lifetick2.first = BaseLib::HelperFunctions::getTime();
-    }
+    lifetick_2_.first = BaseLib::HelperFunctions::getTime();
+    lifetick_2_.second = false;
 
     BaseLib::PVariable array(new BaseLib::Variable(BaseLib::PArray(new BaseLib::Array{threadId, packetId, variable})));
     std::vector<char> data;
     _rpcEncoder->encodeResponse(array, data);
     if (GD::ipcLogger->enabled()) GD::ipcLogger->log(IpcModule::ipc, packetId->integerValue, clientData->pid, IpcLoggerPacketDirection::toClient, data);
     send(clientData, data);
-
-    {
-      std::lock_guard<std::mutex> lifetick2Guard(_lifetick2Mutex);
-      _lifetick2.second = true;
-    }
   }
   catch (const std::exception &ex) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
@@ -1246,6 +1267,7 @@ void IpcServer::sendResponse(PIpcClientData &clientData, BaseLib::PVariable &thr
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
   }
+  lifetick_2_.second = true;
 }
 
 void IpcServer::mainThread() {
@@ -1306,7 +1328,7 @@ void IpcServer::mainThread() {
       if (FD_ISSET(_serverFileDescriptor->descriptor, &readFileDescriptor) && !_shuttingDown) {
         sockaddr_un clientAddress;
         socklen_t addressSize = sizeof(addressSize);
-        std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept(_serverFileDescriptor->descriptor, (struct sockaddr *)&clientAddress, &addressSize));
+        std::shared_ptr<BaseLib::FileDescriptor> clientFileDescriptor = GD::bl->fileDescriptorManager.add(accept4(_serverFileDescriptor->descriptor, (struct sockaddr *)&clientAddress, &addressSize, SOCK_CLOEXEC));
         if (!clientFileDescriptor || clientFileDescriptor->descriptor == -1) continue;
 
         int32_t clientId = -1;
@@ -1436,7 +1458,7 @@ bool IpcServer::getFileDescriptor(bool deleteOldSocket) {
       }
     } else if (BaseLib::Io::fileExists(_socketPath)) return false;
 
-    _serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
+    _serverFileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0));
     if (_serverFileDescriptor->descriptor == -1) {
       _out.printCritical("Critical: Couldn't create socket: " + _socketPath + ". Flows won't work. Error: " + strerror(errno));
       return false;
@@ -1447,7 +1469,7 @@ bool IpcServer::getFileDescriptor(bool deleteOldSocket) {
       _out.printCritical("Critical: Couldn't set socket options: " + _socketPath + ". Flows won't work correctly. Error: " + strerror(errno));
       return false;
     }
-    sockaddr_un serverAddress;
+    sockaddr_un serverAddress{};
     serverAddress.sun_family = AF_LOCAL;
     //104 is the size on BSD systems - slightly smaller than in Linux
     if (_socketPath.length() > 104) {
@@ -1709,10 +1731,11 @@ BaseLib::PVariable IpcServer::noderedEvent(PIpcClientData &clientData, int32_t t
 
 BaseLib::PVariable IpcServer::ptyOutput(PIpcClientData &clientData, int32_t threadId, BaseLib::PArray &parameters) {
   try {
-    if (parameters->empty()) return BaseLib::Variable::createError(-1, "Method expects one parameter. " + std::to_string(parameters->size()) + " given.");
-    if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter is not of type string.");
+    if (parameters->size() != 2) return BaseLib::Variable::createError(-1, "Method expects two parameters. " + std::to_string(parameters->size()) + " given.");
+    if (parameters->at(0)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 1 is not of type string.");
+    if (parameters->at(1)->type != BaseLib::VariableType::tString) return BaseLib::Variable::createError(-1, "Parameter 2 is not of type string.");
 
-    GD::rpcClient->broadcastPtyOutput(parameters->at(0)->stringValue);
+    GD::rpcClient->broadcastPtyOutput(parameters->at(0)->stringValue, parameters->at(1)->stringValue);
 
     return std::make_shared<BaseLib::Variable>();
   }

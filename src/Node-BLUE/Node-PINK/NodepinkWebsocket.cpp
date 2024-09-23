@@ -77,14 +77,12 @@ void NodepinkWebsocket::collectGarbage() {
     _lastGarbageCollection = BaseLib::HelperFunctions::getTime();
     std::vector<int32_t> clientsToRemove;
     std::lock_guard<std::mutex> clientsGuard(_clientsMutex);
-    for (auto &client : _clients) {
-      if (!client.second->fileDescriptor ||
-          client.second->fileDescriptor->descriptor == -1 ||
-          client.second->clientSocket->getFileDescriptor()->descriptor == -1) {
+    for (auto &client: _clients) {
+      if (!client.second->socket->IsValid() || !client.second->clientSocket->IsValid()) {
         clientsToRemove.push_back(client.first);
       }
     }
-    for (auto &client : clientsToRemove) {
+    for (auto &client: clientsToRemove) {
       _clients.erase(client);
     }
   }
@@ -118,17 +116,14 @@ void NodepinkWebsocket::mainThread() {
         {
           auto fileDescriptorGuard = GD::bl->fileDescriptorManager.getLock();
           fileDescriptorGuard.lock();
-          for (auto &client : clients) {
-            auto clientSocketFileDescriptor = client.second->clientSocket->getFileDescriptor();
-            if (!client.second->fileDescriptor->descriptor ||
-                client.second->fileDescriptor->descriptor == -1 ||
-                clientSocketFileDescriptor->descriptor == -1) {
+          for (auto &client: clients) {
+            if (!client.second->socket->IsValid() || !client.second->clientSocket->IsValid()) {
               continue;
             }
-            FD_SET(clientSocketFileDescriptor->descriptor, &readFileDescriptor);
-            if (clientSocketFileDescriptor->descriptor > maxfd) maxfd = clientSocketFileDescriptor->descriptor;
-            FD_SET(client.second->fileDescriptor->descriptor, &readFileDescriptor);
-            if (client.second->fileDescriptor->descriptor > maxfd) maxfd = client.second->fileDescriptor->descriptor;
+            FD_SET(client.second->clientSocket->GetSocketHandle(), &readFileDescriptor);
+            if (client.second->clientSocket->GetSocketHandle() > maxfd) maxfd = client.second->clientSocket->GetSocketHandle();
+            FD_SET(client.second->socket->GetSocketHandle(), &readFileDescriptor);
+            if (client.second->socket->GetSocketHandle() > maxfd) maxfd = client.second->socket->GetSocketHandle();
           }
         }
 
@@ -144,12 +139,12 @@ void NodepinkWebsocket::mainThread() {
           continue;
         }
 
-        for (auto &client : clients) {
-          if (client.second->fileDescriptor->descriptor == -1 || client.second->clientSocket->getFileDescriptor()->descriptor == -1) continue;
-          if (FD_ISSET(client.second->clientSocket->getFileDescriptor()->descriptor, &readFileDescriptor)) {
+        for (auto &client: clients) {
+          if (!client.second->socket->IsValid() || !client.second->clientSocket->IsValid()) continue;
+          if (FD_ISSET(client.second->clientSocket->GetSocketHandle(), &readFileDescriptor)) {
             readNoderedClient(client.second);
           }
-          if (FD_ISSET(client.second->fileDescriptor->descriptor, &readFileDescriptor)) {
+          if (FD_ISSET(client.second->socket->GetSocketHandle(), &readFileDescriptor)) {
             readClient(client.second);
           }
         }
@@ -170,24 +165,24 @@ void NodepinkWebsocket::readClient(const PClientData &clientData) {
     bool moreData = true;
 
     while (moreData) {
-      bytesRead = clientData->socket->proofread((char *)clientData->buffer.data(), clientData->buffer.size(), moreData);
+      bytesRead = clientData->socket->Read((uint8_t *)clientData->buffer.data(), clientData->buffer.size(), moreData);
 
       if (bytesRead > (signed)clientData->buffer.size()) bytesRead = clientData->buffer.size();
 
-      if (!clientData->clientSocket->connected()) {
-        GD::bl->fileDescriptorManager.close(clientData->fileDescriptor);
+      if (!clientData->clientSocket->Connected()) {
+        clientData->socket->Shutdown();
         _out.printInfo("Info: Connection to client " + std::to_string(clientData->id) + " closed (1).");
         return;
       }
       if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Writing to client socket: " + BaseLib::HelperFunctions::getHexString(clientData->buffer.data(), bytesRead));
-      clientData->clientSocket->proofwrite((char *)clientData->buffer.data(), bytesRead);
+      clientData->clientSocket->Send(clientData->buffer.data(), bytesRead);
     }
   }
-  catch (const BaseLib::SocketClosedException &ex) {
+  catch (const C1Net::ClosedException &ex) {
     _out.printInfo("Info: Connection to client " + std::to_string(clientData->id) + " closed (2).");
   }
   catch (const std::exception &ex) {
-    GD::bl->fileDescriptorManager.close(clientData->fileDescriptor);
+    clientData->socket->Shutdown();
     _out.printError("Error reading from client " + std::to_string(clientData->id) + ": " + ex.what());
   }
 }
@@ -198,49 +193,53 @@ void NodepinkWebsocket::readNoderedClient(const PClientData &clientData) {
     bool moreData = true;
 
     while (moreData) {
-      bytesRead = clientData->clientSocket->proofread((char *)clientData->buffer.data(), clientData->buffer.size(), moreData);
+      bytesRead = clientData->clientSocket->Read(clientData->buffer.data(), clientData->buffer.size(), moreData);
 
       if (bytesRead > (signed)clientData->buffer.size()) bytesRead = clientData->buffer.size();
 
-      if (!clientData->socket->connected()) {
-        clientData->clientSocket->close();
+      if (!clientData->socket->Connected()) {
+        clientData->clientSocket->Shutdown();
         _out.printInfo("Info: Connection to client " + std::to_string(clientData->id) + " closed (3).");
         return;
       }
       if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Writing to browser socket: " + BaseLib::HelperFunctions::getHexString(clientData->buffer.data(), bytesRead));
-      clientData->socket->proofwrite((char *)clientData->buffer.data(), bytesRead);
+      clientData->socket->Send(clientData->buffer.data(), bytesRead);
     }
   }
-  catch (const BaseLib::SocketClosedException &ex) {
+  catch (const C1Net::ClosedException &ex) {
     _out.printInfo("Info: Connection to client " + std::to_string(clientData->id) + " closed (4).");
   }
   catch (const std::exception &ex) {
-    GD::bl->fileDescriptorManager.close(clientData->fileDescriptor);
+    clientData->socket->Shutdown();
     _out.printError("Error reading from client " + std::to_string(clientData->id) + ": " + ex.what());
   }
 }
 
-void NodepinkWebsocket::handoverClient(const BaseLib::PTcpSocket &socket, const BaseLib::PFileDescriptor &fileDescriptor, const BaseLib::Http &initialPacket) {
+void NodepinkWebsocket::handoverClient(const C1Net::PTcpSocket &socket, const BaseLib::Http &initialPacket) {
   try {
     _out.printInfo("Info: New Node-PINK WebSocket connection.");
     auto clientData = std::make_shared<ClientData>();
     clientData->socket = socket;
-    clientData->fileDescriptor = fileDescriptor;
-    clientData->clientSocket = std::make_shared<BaseLib::TcpSocket>(GD::bl.get(), "127.0.0.1", std::to_string(GD::bl->settings.nodeRedPort()));
-    clientData->clientSocket->setReadTimeout(100000);
-    clientData->clientSocket->setWriteTimeout(15000000);
-    clientData->clientSocket->setAutoConnect(false);
-    clientData->clientSocket->open();
+
+    C1Net::TcpSocketInfo tcp_socket_info;
+    C1Net::TcpSocketHostInfo tcp_socket_host_info;
+
+    tcp_socket_host_info.host = "127.0.0.1";
+    tcp_socket_host_info.port = GD::bl->settings.nodeRedPort();
+    tcp_socket_host_info.auto_connect = false;
+
+    clientData->clientSocket = std::make_shared<C1Net::TcpSocket>(tcp_socket_info, tcp_socket_host_info);
+    clientData->clientSocket->Open();
 
     auto rawHeader = std::string(initialPacket.getRawHeader().data(), initialPacket.getRawHeader().size());
     BaseLib::HelperFunctions::stringReplace(rawHeader, "GET /node-blue/", "GET /");
 
-    std::vector<char> packet;
+    std::vector<uint8_t> packet;
     packet.reserve(rawHeader.size() + initialPacket.getContentSize());
     packet.insert(packet.end(), rawHeader.begin(), rawHeader.end());
     packet.insert(packet.end(), initialPacket.getContent().data(), initialPacket.getContent().data() + initialPacket.getContentSize());
     if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Writing to client socket: " + BaseLib::HelperFunctions::getHexString(packet.data(), packet.size()));
-    clientData->clientSocket->proofwrite(packet);
+    clientData->clientSocket->Send(packet);
 
     std::lock_guard<std::mutex> clientsGuard(_clientsMutex);
     clientData->id = _currentClientId++;

@@ -73,6 +73,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000) {
   _localRpcMethods.emplace("reload", std::bind(&ScriptEngineClient::reload, this, std::placeholders::_1));
   _localRpcMethods.emplace("shutdown", std::bind(&ScriptEngineClient::shutdown, this, std::placeholders::_1));
   _localRpcMethods.emplace("lifetick", std::bind(&ScriptEngineClient::lifetick, this, std::placeholders::_1));
+  _localRpcMethods.emplace("getLoad", std::bind(&ScriptEngineClient::getLoad, this, std::placeholders::_1));
   _localRpcMethods.emplace("stopDevices", std::bind(&ScriptEngineClient::stopDevices, this, std::placeholders::_1));
   _localRpcMethods.emplace("executeScript", std::bind(&ScriptEngineClient::executeScript, this, std::placeholders::_1));
   _localRpcMethods.emplace("scriptCount", std::bind(&ScriptEngineClient::scriptCount, this, std::placeholders::_1));
@@ -95,6 +96,7 @@ ScriptEngineClient::ScriptEngineClient() : IQueue(GD::bl.get(), 2, 100000) {
 
 ScriptEngineClient::~ScriptEngineClient() {
   dispose(true);
+  php_homegear_deinit();
   if (_maintenanceThread.joinable()) _maintenanceThread.join();
   if (_watchdogThread.joinable()) _watchdogThread.join();
 }
@@ -141,7 +143,6 @@ void ScriptEngineClient::dispose(bool broadcastShutdown) {
     stopEventThreads();
     stopQueue(0);
     stopQueue(1);
-    php_homegear_deinit();
     _scriptCache.clear();
     _rpcResponses.clear();
   }
@@ -174,7 +175,7 @@ void ScriptEngineClient::start() {
     _socketPath = GD::bl->settings.socketPath() + "homegearSE.sock";
     if (GD::bl->debugLevel >= 5) _out.printDebug("Debug: Socket path is " + _socketPath);
     for (int32_t i = 0; i < 2; i++) {
-      _fileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_NONBLOCK, 0));
+      _fileDescriptor = GD::bl->fileDescriptorManager.add(socket(AF_LOCAL, SOCK_STREAM | SOCK_CLOEXEC | SOCK_NONBLOCK, 0));
       if (!_fileDescriptor || _fileDescriptor->descriptor == -1) {
         _out.printError("Could not create socket.");
         return;
@@ -847,7 +848,7 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo) {
         zendHandle.filename = scriptInfo->fullPath.c_str();
         zendHandle.opened_path = nullptr;
         zendHandle.free_filename = 0;
-#else
+#elif PHP_VERSION_ID < 80200
         auto stream = new hg_stream_handle();
         stream->position = 0;
         stream->buffer = scriptInfo->script;
@@ -860,12 +861,29 @@ void ScriptEngineClient::runScript(int32_t id, PScriptInfo scriptInfo) {
         zendHandle.handle.stream.fsizer = hg_zend_stream_fsizer;
         zendHandle.handle.stream.isatty = 0;
         zendHandle.handle.stream.closer = hg_zend_stream_closer;
+#else
+        auto stream = new hg_stream_handle();
+        stream->position = 0;
+        stream->buffer = scriptInfo->script;
+
+        zendHandle.type = ZEND_HANDLE_STREAM;
+        zendHandle.filename = zend_string_init(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.length(), false);
+        zendHandle.opened_path = nullptr; //It might make sense to set this.
+        zendHandle.handle.stream.handle = stream;
+        zendHandle.handle.stream.reader = hg_zend_stream_reader;
+        zendHandle.handle.stream.fsizer = hg_zend_stream_fsizer;
+        zendHandle.handle.stream.isatty = 0;
+        zendHandle.handle.stream.closer = hg_zend_stream_closer;
 #endif
       } else {
         zendHandle.type = ZEND_HANDLE_FILENAME;
+#if PHP_VERSION_ID < 80200
         zendHandle.filename = scriptInfo->fullPath.c_str();
-        zendHandle.opened_path = nullptr;
         zendHandle.free_filename = 0;
+#else
+        zendHandle.filename = zend_string_init(scriptInfo->fullPath.c_str(), scriptInfo->fullPath.length(), false);
+#endif
+        zendHandle.opened_path = nullptr;
       }
 
       zend_homegear_globals *globals = php_homegear_get_globals();
@@ -1251,7 +1269,7 @@ void ScriptEngineClient::checkSessionIdThread(std::string sessionId, std::string
 
     zval *reference = zend_hash_str_find(&EG(symbol_table), "_SESSION", sizeof("_SESSION") - 1);
     if (reference != nullptr) {
-      if (Z_ISREF_P(reference) && Z_RES_P(reference)->ptr && Z_TYPE_P(Z_REFVAL_P(reference)) == IS_ARRAY) {
+      if (Z_ISREF_P(reference) && Z_TYPE_P(Z_REFVAL_P(reference)) == IS_ARRAY) {
         zval *token = zend_hash_str_find(Z_ARRVAL_P(Z_REFVAL_P(reference)), "authorized", sizeof("authorized") - 1);
         if (token != nullptr) {
           if (Z_TYPE_P(token) == IS_TRUE) {
@@ -1361,6 +1379,33 @@ BaseLib::PVariable ScriptEngineClient::lifetick(BaseLib::PArray &parameters) {
   }
   catch (...) {
     _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__);
+  }
+  return BaseLib::Variable::createError(-32500, "Unknown application error.");
+}
+
+BaseLib::PVariable ScriptEngineClient::getLoad(BaseLib::PArray &parameters) {
+  try {
+    auto loadStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+    for (int32_t i = 0; i < _queueCount; i++) {
+      auto queueStruct = std::make_shared<BaseLib::Variable>(BaseLib::VariableType::tStruct);
+
+      queueStruct->structValue->emplace("Max load", std::make_shared<BaseLib::Variable>(maxThreadLoad(i)));
+      queueStruct->structValue->emplace("Max load 1m", std::make_shared<BaseLib::Variable>(maxThreadLoad1m(i)));
+      queueStruct->structValue->emplace("Max load 10m", std::make_shared<BaseLib::Variable>(maxThreadLoad10m(i)));
+      queueStruct->structValue->emplace("Max load 1h", std::make_shared<BaseLib::Variable>(maxThreadLoad1h(i)));
+      queueStruct->structValue->emplace("Max latency", std::make_shared<BaseLib::Variable>(maxWait(i)));
+      queueStruct->structValue->emplace("Max latency 1m", std::make_shared<BaseLib::Variable>(maxWait1m(i)));
+      queueStruct->structValue->emplace("Max latency 10m", std::make_shared<BaseLib::Variable>(maxWait10m(i)));
+      queueStruct->structValue->emplace("Max latency 1h", std::make_shared<BaseLib::Variable>(maxWait1h(i)));
+
+      loadStruct->structValue->emplace("Queue " + std::to_string(i + 1), queueStruct);
+    }
+
+    return loadStruct;
+  }
+  catch (const std::exception &ex) {
+    _out.printEx(__FILE__, __LINE__, __PRETTY_FUNCTION__, ex.what());
   }
   return BaseLib::Variable::createError(-32500, "Unknown application error.");
 }

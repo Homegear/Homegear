@@ -431,7 +431,7 @@
     "translations": {
       "de-CH": "Heizung - Warmwassertemperatur",
       "de-DE": "Heizung - Warmwassertemperatur",
-      "en-US": "heating - warm water temperature"
+      "en-US": "heating system - warm water temperature"
     }
   },
   {
@@ -442,7 +442,7 @@
     "translations": {
       "de-CH": "Heizung - Warmwasser Solltemperatur",
       "de-DE": "Heizung - Warmwasser Solltemperatur",
-      "en-US": "heating - warm water setpoint temperature"
+      "en-US": "heating system - warm water setpoint temperature"
     }
   },
   {
@@ -453,7 +453,7 @@
     "translations": {
       "de-CH": "Heizung - Aussentemperatur",
       "de-DE": "Heizung - Außentemperatur",
-      "en-US": "heating - outside temperature"
+      "en-US": "heating system - outside temperature"
     }
   },
   {
@@ -464,7 +464,7 @@
     "translations": {
       "de-CH": "Heizung - Betriebsstunden",
       "de-DE": "Heizung - Betriebsstunden",
-      "en-US": "heating - operating hours"
+      "en-US": "heating system - operating hours"
     }
   },
   {
@@ -472,7 +472,7 @@
     "translations": {
       "de-CH": "Heizung - Heizkreispumpe",
       "de-DE": "Heizung - Heizkreispumpe",
-      "en-US": "heating - circuit pump"
+      "en-US": "heating system - circuit pump"
     }
   },
   {
@@ -480,7 +480,7 @@
     "translations": {
       "de-CH": "Heizung - Anforderung",
       "de-DE": "Heizung - Anforderung",
-      "en-US": "heating - demand"
+      "en-US": "heating system - demand"
     }
   },
   {
@@ -488,7 +488,7 @@
     "translations": {
       "de-CH": "Heizung - Mischerstellung",
       "de-DE": "Heizung - Mischerstellung",
-      "en-US": "heating - mixing valve level"
+      "en-US": "heating system - mixing valve level"
     }
   },
   {
@@ -496,7 +496,7 @@
     "translations": {
       "de-CH": "Heizung - Vorlauftemperatur",
       "de-DE": "Heizung - Vorlauftemperatur",
-      "en-US": "heating - supply temperature"
+      "en-US": "heating system - supply temperature"
     }
   },
   {
@@ -504,7 +504,7 @@
     "translations": {
       "de-CH": "Heizung - Rücklauftemperatur",
       "de-DE": "Heizung - Rücklauftemperatur",
-      "en-US": "heating - return temperature"
+      "en-US": "heating system - return temperature"
     }
   },
   {
@@ -512,7 +512,65 @@
     "translations": {
       "de-CH": "Heizung - Betriebsmeldung",
       "de-DE": "Heizung - Betriebsmeldung",
-      "en-US": "heating - operating notification"
+      "en-US": "heating system - operating notification"
+    }
+  },
+  {
+    "id": "20.10.17",
+    "translations": {
+      "de-CH": "Heizung - Druck",
+      "de-DE": "Heizung - Druck",
+      "en-US": "heating system - pressure"
+    }
+  },
+  {
+    "id": "20.10.18",
+    "translations": {
+      "de-CH": "Heizung - Aktuelle Heizleistung",
+      "de-DE": "Heizung - Aktuelle Heizleistung",
+      "en-US": "heating system - current heating power"
+    },
+    "aggregation":  "max"
+  },
+  {
+    "id": "20.10.19",
+    "translations": {
+      "de-CH": "Heizung - Taktung",
+      "de-DE": "Heizung - Taktung",
+      "en-US": "heating system - on/off cycles"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "20.10.20",
+    "translations": {
+      "de-CH": "Heizung - Wirkungsgrad",
+      "de-DE": "Heizung - Wirkungsgrad",
+      "en-US": "heating system - efficiency"
+    }
+  },
+  {
+    "id": "20.10.21",
+    "translations": {
+      "de-CH": "Heizung - Energieverlust",
+      "de-DE": "Heizung - Energieverlust",
+      "en-US": "heating system - energy loss"
+    }
+  },
+  {
+    "id": "20.10.22",
+    "translations": {
+      "de-CH": "Heizung - CO₂",
+      "de-DE": "Heizung - CO₂",
+      "en-US": "heating system - CO₂"
+    }
+  },
+  {
+    "id": "20.11.00",
+    "translations": {
+      "de-CH": "Druckhaltestation",
+      "de-DE": "Druckhaltestation",
+      "en-US": "pressure-maintaining station"
     }
   },
   {
@@ -865,6 +923,22 @@
     }
   },
   {
+    "id": "30.11.00",
+    "translations": {
+      "de-CH": "Türe",
+      "de-DE": "Türe",
+      "en-US": "door"
+    }
+  },
+  {
+    "id": "30.12.00",
+    "translations": {
+      "de-CH": "Tor",
+      "de-DE": "Tor",
+      "en-US": "gate"
+    }
+  },
+  {
     "id": "30.20.00",
     "translations": {
       "de-CH": "RWA-Anlage",
@@ -928,6 +1002,14 @@
           "false": "aus"
         }
       }
+    }
+  },
+  {
+    "id": "40.20.00",
+    "translations": {
+      "de-CH": "Niederspannungshauptverteilung",
+      "de-DE": "Niederspannungshauptverteilung",
+      "en-US": "low voltage distribution"
     }
   },
   {
@@ -1901,6 +1983,28 @@
     }
   },
   {
+    "id": "80.00.03",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Gerät aktiv",
+      "de-DE": "Gerät aktiv",
+      "en-US": "device alive"
+    }
+  },
+  {
+    "id": "80.00.04",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Allgemeine Servicemeldung",
+      "de-DE": "Allgemeine Servicemeldung",
+      "en-US": "generic service message"
+    }
+  },
+  {
     "id": "80.01.00",
     "types": [
       "bool"
@@ -1942,6 +2046,17 @@
       "de-CH": "Aktiv",
       "de-DE": "Aktiv",
       "en-US": "active"
+    }
+  },
+  {
+    "id": "80.01.04",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Allgemeine Betriebsmeldung",
+      "de-DE": "Allgemeine Betriebsmeldung",
+      "en-US": "generic operating notification"
     }
   },
   {
@@ -2000,6 +2115,17 @@
     }
   },
   {
+    "id": "80.02.05",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Überspannungsschutz ausgelöst",
+      "de-DE": "Überspannungsschutz ausgelöst",
+      "en-US": "surge protection tripped"
+    }
+  },
+  {
     "id": "80.03.00",
     "types": [
       "bool"
@@ -2055,6 +2181,50 @@
     }
   },
   {
+    "id": "81.00.00",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Betriebsmeldungen",
+      "de-DE": "Betriebsmeldungen",
+      "en-US": "operating notification"
+    }
+  },
+  {
+    "id": "81.00.01",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Betrieb",
+      "de-DE": "Betrieb",
+      "en-US": "operation"
+    }
+  },
+  {
+    "id": "81.00.02",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Notbetrieb",
+      "de-DE": "Notbetrieb",
+      "en-US": "emergency operation"
+    }
+  },
+  {
+    "id": "81.00.03",
+    "types": [
+      "bool"
+    ],
+    "translations": {
+      "de-CH": "Aktiv",
+      "de-DE": "Aktiv",
+      "en-US": "active"
+    }
+  },
+  {
     "id": "90.00.00",
     "translations": {
       "de-CH": "Zähler",
@@ -2065,9 +2235,9 @@
   {
     "id": "90.01.00",
     "translations": {
-      "de-CH": "Wasserzähler",
-      "de-DE": "Wasserzähler",
-      "en-US": "Water meter"
+      "de-CH": "Generischer Wasserzähler",
+      "de-DE": "Generischer Wasserzähler",
+      "en-US": "Generic water meter"
     }
   },
   {
@@ -2115,6 +2285,482 @@
     "aggregation": "count"
   },
   {
+    "id": "90.02.03",
+    "translations": {
+      "de-CH": "Zählerstand T1",
+      "de-DE": "Zählerstand T1",
+      "en-US": "Meter reading T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.04",
+    "translations": {
+      "de-CH": "Verbrauch T1",
+      "de-DE": "Verbrauch T1",
+      "en-US": "Consumption T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.05",
+    "translations": {
+      "de-CH": "Zählerstand T2",
+      "de-DE": "Zählerstand T2",
+      "en-US": "Meter reading T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.06",
+    "translations": {
+      "de-CH": "Verbrauch T2",
+      "de-DE": "Verbrauch T2",
+      "en-US": "Consumption T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.07",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Bezug T1",
+      "de-DE": "Zählerstand Wirkenergie Bezug T1",
+      "en-US": "Meter reading active energy (consumption) T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.08",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Bezug T1",
+      "de-DE": "Verbrauch Wirkenergie Bezug T1",
+      "en-US": "Consumption active energy (consumption) T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.09",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Bezug T2",
+      "de-DE": "Zählerstand Wirkenergie Bezug T2",
+      "en-US": "Meter reading active energy (consumption) T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.10",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Bezug T2",
+      "de-DE": "Verbrauch Wirkenergie Bezug T2",
+      "en-US": "Consumption active energy (consumption) T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.11",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Bezug gesamt",
+      "de-DE": "Zählerstand Wirkenergie Bezug gesamt",
+      "en-US": "Meter reading active energy (consumption) total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.12",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Bezug gesamt",
+      "de-DE": "Verbrauch Wirkenergie Bezug gesamt",
+      "en-US": "Consumption active energy (consumption) total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.13",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Einspeisung T1",
+      "de-DE": "Zählerstand Wirkenergie Einspeisung T1",
+      "en-US": "Meter reading active energy (production) T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.14",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Einspeisung T1",
+      "de-DE": "Verbrauch Wirkenergie Einspeisung T1",
+      "en-US": "Consumption active energy (production) T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.15",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Einspeisung T2",
+      "de-DE": "Zählerstand Wirkenergie Einspeisung T2",
+      "en-US": "Meter reading active energy (production) T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.16",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Einspeisung T2",
+      "de-DE": "Verbrauch Wirkenergie Einspeisung T2",
+      "en-US": "Consumption active energy (production) T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.17",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Einspeisung gesamt",
+      "de-DE": "Zählerstand Wirkenergie Einspeisung gesamt",
+      "en-US": "Meter reading active energy (production) total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.18",
+    "translations": {
+      "de-CH": "Verbrauch Wirkenergie Einspeisung gesamt",
+      "de-DE": "Verbrauch Wirkenergie Einspeisung gesamt",
+      "en-US": "Consumption active energy (production) total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.19",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Bezug T1",
+      "de-DE": "Zählerstand Blindenergie Bezug T1",
+      "en-US": "Meter reading reactive energy (consumption) T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.20",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Bezug T1",
+      "de-DE": "Verbrauch Blindenergie Bezug T1",
+      "en-US": "Consumption reactive energy (consumption) T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.21",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Bezug T2",
+      "de-DE": "Zählerstand Blindenergie Bezug T2",
+      "en-US": "Meter reading reactive energy (consumption) T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.22",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Bezug T2",
+      "de-DE": "Verbrauch Blindenergie Bezug T2",
+      "en-US": "Consumption reactive energy (consumption) T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.23",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Bezug gesamt",
+      "de-DE": "Zählerstand Blindenergie Bezug gesamt",
+      "en-US": "Meter reading reactive energy (consumption) total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.24",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Bezug gesamt",
+      "de-DE": "Verbrauch Blindenergie Bezug gesamt",
+      "en-US": "Consumption reactive energy (consumption) total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.25",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Einspeisung T1",
+      "de-DE": "Zählerstand Blindenergie Einspeisung T1",
+      "en-US": "Meter reading reactive energy (production) T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.26",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Einspeisung T1",
+      "de-DE": "Verbrauch Blindenergie Einspeisung T1",
+      "en-US": "Consumption reactive energy (production) T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.27",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Einspeisung T2",
+      "de-DE": "Zählerstand Blindenergie Einspeisung T2",
+      "en-US": "Meter reading reactive energy (production) T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.28",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Einspeisung T2",
+      "de-DE": "Verbrauch Blindenergie Einspeisung T2",
+      "en-US": "Consumption reactive energy (production) T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.29",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie Einspeisung gesamt",
+      "de-DE": "Zählerstand Blindenergie Einspeisung gesamt",
+      "en-US": "Meter reading reactive energy (production) total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.30",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie Einspeisung gesamt",
+      "de-DE": "Verbrauch Blindenergie Einspeisung gesamt",
+      "en-US": "Consumption reactive energy (production) total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.31",
+    "translations": {
+      "de-CH": "Zählerstand Blindenergie gesamt",
+      "de-DE": "Zählerstand Blindenergie gesamt",
+      "en-US": "Meter reading reactive energy total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.32",
+    "translations": {
+      "de-CH": "Verbrauch Blindenergie gesamt",
+      "de-DE": "Verbrauch Blindenergie gesamt",
+      "en-US": "Consumption reactive energy total"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.50",
+    "translations": {
+      "de-CH": "Wirkleistung total",
+      "de-DE": "Wirkleistung total",
+      "en-US": "Active power total"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.52",
+    "translations": {
+      "de-CH": "Cos Phi L1",
+      "de-DE": "Cos Phi L1",
+      "en-US": "Cos Phi L1"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.54",
+    "translations": {
+      "de-CH": "Cos Phi L2",
+      "de-DE": "Cos Phi L2",
+      "en-US": "Cos Phi L2"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.56",
+    "translations": {
+      "de-CH": "Cos Phi L3",
+      "de-DE": "Cos Phi L3",
+      "en-US": "Cos Phi L3"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.58",
+    "translations": {
+      "de-CH": "Cos Phi total",
+      "de-DE": "Cos Phi total",
+      "en-US": "Cos Phi total"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.60",
+    "translations": {
+      "de-CH": "Stromstärke L1",
+      "de-DE": "Stromstärke L1",
+      "en-US": "Current L1"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.62",
+    "translations": {
+      "de-CH": "Stromstärke L2",
+      "de-DE": "Stromstärke L2",
+      "en-US": "Current L2"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.64",
+    "translations": {
+      "de-CH": "Stromstärke L3",
+      "de-DE": "Stromstärke L3",
+      "en-US": "Current L3"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.66",
+    "translations": {
+      "de-CH": "Frequenz",
+      "de-DE": "Frequenz",
+      "en-US": "Frequency"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.68",
+    "translations": {
+      "de-CH": "Blindenergie induktiv T1",
+      "de-DE": "Blindenergie induktiv T1",
+      "en-US": "Reactive energy inductive T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.70",
+    "translations": {
+      "de-CH": "Blindenergie induktiv T2",
+      "de-DE": "Blindenergie induktiv T2",
+      "en-US": "Reactive energy inductive T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.72",
+    "translations": {
+      "de-CH": "Blindenergie induktiv total ",
+      "de-DE": "Blindenergie induktiv total ",
+      "en-US": "Reactive energy inductive total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.74",
+    "translations": {
+      "de-CH": "Blindenergie kapazitiv T1",
+      "de-DE": "Blindenergie kapazitiv T1",
+      "en-US": "Reactive energy capazitive T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.76",
+    "translations": {
+      "de-CH": "Blindenergie kapazitiv T2",
+      "de-DE": "Blindenergie kapazitiv T2",
+      "en-US": "Reactive energy capazitive T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.78",
+    "translations": {
+      "de-CH": "Blindenergie kapazitiv total",
+      "de-DE": "Blindenergie kapazitiv total",
+      "en-US": "Reactive energy capazitive total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.80",
+    "translations": {
+      "de-CH": "Blindleistung total",
+      "de-DE": "Blindleistung total",
+      "en-US": "Reactive power total"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.82",
+    "translations": {
+      "de-CH": "Tarif",
+      "de-DE": "Tarif",
+      "en-US": "Tariff"
+    }
+  },
+  {
+    "id": "90.02.84",
+    "translations": {
+      "de-CH": "Spannung L1-N",
+      "de-DE": "Spannung L1-N",
+      "en-US": "Voltage L1-N"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.86",
+    "translations": {
+      "de-CH": "Spannung L2-N",
+      "de-DE": "Spannung L2-N",
+      "en-US": "Voltage L2-N"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.88",
+    "translations": {
+      "de-CH": "Spannung L3-N",
+      "de-DE": "Spannung L3-N",
+      "en-US": "Voltage L3-N"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.90",
+    "translations": {
+      "de-CH": "Spannung L1-L2",
+      "de-DE": "Spannung L1-L2",
+      "en-US": "Voltage L1-L2"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.92",
+    "translations": {
+      "de-CH": "Spannung L2-L3",
+      "de-DE": "Spannung L2-L3",
+      "en-US": "Voltage L2-L3"
+    },
+    "aggregation": "average"
+  },
+  {
+    "id": "90.02.94",
+    "translations": {
+      "de-CH": "Spannung L3-L1",
+      "de-DE": "Spannung L3-L1",
+      "en-US": "Voltage L3-L1"
+    },
+    "aggregation": "average"
+  },
+  {
     "id": "90.03.00",
     "translations": {
       "de-CH": "Gaszähler",
@@ -2125,27 +2771,45 @@
   {
     "id": "90.03.01",
     "translations": {
-      "de-CH": "Zählerstand",
-      "de-DE": "Zählerstand",
-      "en-US": "Meter reading"
+      "de-CH": "Zählerstand (Volumen)",
+      "de-DE": "Zählerstand (Volumen)",
+      "en-US": "Meter reading (volume)"
     },
     "aggregation": "meter"
   },
   {
     "id": "90.03.02",
     "translations": {
-      "de-CH": "Verbrauch",
-      "de-DE": "Verbrauch",
-      "en-US": "Consumption"
+      "de-CH": "Verbrauch (Volumen)",
+      "de-DE": "Verbrauch (Volumen)",
+      "en-US": "Consumption (volume)"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.03.03",
+    "translations": {
+      "de-CH": "Zählerstand (Energie)",
+      "de-DE": "Zählerstand (Energie)",
+      "en-US": "Consumption (energy)"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.03.04",
+    "translations": {
+      "de-CH": "Verbrauch (Energie)",
+      "de-DE": "Verbrauch (Energie)",
+      "en-US": "Consumption (energy)"
     },
     "aggregation": "count"
   },
   {
     "id": "90.04.00",
     "translations": {
-      "de-CH": "Wärmemengenzähler",
-      "de-DE": "Wärmemengenzähler",
-      "en-US": "Heat meter"
+      "de-CH": "Wärmemengenzähler Heizung",
+      "de-DE": "Wärmemengenzähler Heizung",
+      "en-US": "Heat meter for heating"
     }
   },
   {
@@ -2165,6 +2829,46 @@
       "en-US": "Consumption"
     },
     "aggregation": "count"
+  },
+  {
+    "id": "90.04.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.04.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.04.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.04.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
+  },
+  {
+    "id": "90.04.07",
+    "translations": {
+      "de-CH": "Leistung",
+      "de-DE": "Leistung",
+      "en-US": "Thermal power"
+    }
   },
   {
     "id": "90.05.00",
@@ -2193,11 +2897,303 @@
     "aggregation": "count"
   },
   {
+    "id": "90.05.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.05.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.05.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.05.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
+  },
+  {
+    "id": "90.05.07",
+    "translations": {
+      "de-CH": "Leistung",
+      "de-DE": "Leistung",
+      "en-US": "Thermal power"
+    }
+  },
+  {
+    "id": "90.06.00",
+    "translations": {
+      "de-CH": "Warmwasserzähler",
+      "de-DE": "Warmwasserzähler",
+      "en-US": "Hot water meter"
+    }
+  },
+  {
+    "id": "90.06.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.06.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.07.00",
+    "translations": {
+      "de-CH": "Kaltwasserzähler",
+      "de-DE": "Kaltwasserzähler",
+      "en-US": "Cold water meter"
+    }
+  },
+  {
+    "id": "90.07.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.07.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.08.00",
+    "translations": {
+      "de-CH": "Abwasserzähler",
+      "de-DE": "Abwasserzähler",
+      "en-US": "Waste water meter"
+    }
+  },
+  {
+    "id": "90.08.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.08.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.09.00",
+    "translations": {
+      "de-CH": "Wärmemengenzähler Warmwasser",
+      "de-DE": "Wärmemengenzähler Warmwasser",
+      "en-US": "Heat meter for hot water"
+    }
+  },
+  {
+    "id": "90.09.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.09.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.09.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.09.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.09.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.09.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
+  },
+  {
+    "id": "90.10.00",
+    "translations": {
+      "de-CH": "Wärmemengenzähler Sonnenkollektor",
+      "de-DE": "Wärmemengenzähler Sonnenkollektor",
+      "en-US": "Heat meter for solar thermal collector"
+    }
+  },
+  {
+    "id": "90.10.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.10.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.10.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.10.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.10.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.10.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
+  },
+  {
+    "id": "90.11.00",
+    "translations": {
+      "de-CH": "Wärmemengenzähler Wärmepumpe",
+      "de-DE": "Wärmemengenzähler Wärmepumpe",
+      "en-US": "Heat meter for heat pump"
+    }
+  },
+  {
+    "id": "90.11.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.11.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.11.03",
+    "translations": {
+      "de-CH": "Volumenfluss",
+      "de-DE": "Volumenfluss",
+      "en-US": "Volume flow"
+    }
+  },
+  {
+    "id": "90.11.04",
+    "translations": {
+      "de-CH": "Vorlauftemperatur",
+      "de-DE": "Vorlauftemperatur",
+      "en-US": "Supply temperature"
+    }
+  },
+  {
+    "id": "90.11.05",
+    "translations": {
+      "de-CH": "Rücklauftemperatur",
+      "de-DE": "Rücklauftemperatur",
+      "en-US": "Return temperature"
+    }
+  },
+  {
+    "id": "90.11.06",
+    "translations": {
+      "de-CH": "Volumen",
+      "de-DE": "Volumen",
+      "en-US": "Volume"
+    }
+  },
+  {
     "id": "01.00.00",
     "translations": {
-      "de-CH": "Umgebungssensoren",
-      "de-DE": "Umgebungssensoren",
-      "en-US": "Environment sensors"
+      "de-CH": "Sensoren",
+      "de-DE": "Sensoren",
+      "en-US": "Sensors"
     }
   },
   {
@@ -2219,9 +3215,9 @@
   {
     "id": "01.00.03",
     "translations": {
-      "de-CH": "CO2",
-      "de-DE": "CO2",
-      "en-US": "CO2"
+      "de-CH": "CO₂",
+      "de-DE": "CO₂",
+      "en-US": "CO₂"
     }
   },
   {
@@ -2241,6 +3237,22 @@
     }
   },
   {
+    "id": "01.00.06",
+    "translations": {
+      "de-CH": "Status",
+      "de-DE": "Status",
+      "en-US": "State"
+    }
+  },
+  {
+    "id": "01.00.07",
+    "translations": {
+      "de-CH": "Leckage",
+      "de-DE": "Leckage",
+      "en-US": "Leakage"
+    }
+  },
+  {
     "id": "02.00.00",
     "translations": {
       "de-CH": "Digitale Infrastruktur",
@@ -2251,17 +3263,89 @@
   {
     "id": "02.01.00",
     "translations": {
-      "de-CH": "ibs-home-Client",
-      "de-DE": "ibs-home-Client",
-      "en-US": "ibs home client"
+      "de-CH": "Sensaru Edge-Client",
+      "de-DE": "Sensaru Edge-Client",
+      "en-US": "Sensaru edge client"
+    }
+  },
+  {
+    "id": "02.01.01",
+    "translations": {
+      "de-CH": "RSRP",
+      "de-DE": "RSRP",
+      "en-US": "RSRP"
+    }
+  },
+  {
+    "id": "02.01.02",
+    "translations": {
+      "de-CH": "RSRQ",
+      "de-DE": "RSRQ",
+      "en-US": "RSRQ"
+    }
+  },
+  {
+    "id": "02.01.03",
+    "translations": {
+      "de-CH": "Coverage extension",
+      "de-DE": "Coverage extension",
+      "en-US": "coverage extension"
+    }
+  },
+  {
+    "id": "02.01.04",
+    "translations": {
+      "de-CH": "NB-IoT-Reset-Zähler",
+      "de-DE": "NB-IoT-Reset-Zähler",
+      "en-US": "NB-IoT reset counter"
+    }
+  },
+  {
+    "id": "02.01.05",
+    "translations": {
+      "de-CH": "Gesamt-Onboardingzeit",
+      "de-DE": "Gesamt-Onboardingzeit",
+      "en-US": "Total onboarding time"
+    }
+  },
+  {
+    "id": "02.01.06",
+    "translations": {
+      "de-CH": "Angelernte Geräte",
+      "de-DE": "Angelernte Geräte",
+      "en-US": "Paired devices"
+    }
+  },
+  {
+    "id": "02.01.07",
+    "translations": {
+      "de-CH": "NB-IoT-Sendefehler",
+      "de-DE": "NB-IoT-Sendefehler",
+      "en-US": "NB-IoT send errors"
     }
   },
   {
     "id": "02.02.00",
     "translations": {
-      "de-CH": "ibs-home-Kommunikationsmodul",
-      "de-DE": "ibs-home-Kommunikationsmodul",
-      "en-US": "ibs home communication module"
+      "de-CH": "Kommunikationsmodul",
+      "de-DE": "Kommunikationsmodul",
+      "en-US": "communication module"
+    }
+  },
+  {
+    "id": "02.03.00",
+    "translations": {
+      "de-CH": "Kommunikationsmodul",
+      "de-DE": "Kommunikationsmodul",
+      "en-US": "communication module"
+    }
+  },
+  {
+    "id": "02.04.00",
+    "translations": {
+      "de-CH": "GLS",
+      "de-DE": "GLS",
+      "en-US": "BMS"
     }
   },
   {
@@ -2326,6 +3410,782 @@
       "de-CH": "Autoaufzug",
       "de-DE": "Autoaufzug",
       "en-US": "car elevator"
+    }
+  },
+  {
+    "id": "A0.00.00",
+    "translations": {
+      "de-CH": "Wärme-Erzeugung",
+      "de-DE": "Wärme-Erzeugung",
+      "en-US": "heat production"
+    }
+  },
+  {
+    "id": "A0.01.00",
+    "translations": {
+      "de-CH": "Fernwärme-Übergabestation",
+      "de-DE": "Fernwärme-Übergabestation",
+      "en-US": "long distance heating transfer station"
+    }
+  },
+  {
+    "id": "A0.02.00",
+    "translations": {
+      "de-CH": "Fernwärme-Unterstation",
+      "de-DE": "Fernwärme-Unterstation",
+      "en-US": "long distance heating sub station"
+    }
+  },
+  {
+    "id": "A0.03.00",
+    "translations": {
+      "de-CH": "Gas-Brennwertkessel",
+      "de-DE": "Gas-Brennwertkessel",
+      "en-US": "gas heating"
+    }
+  },
+  {
+    "id": "A0.04.00",
+    "translations": {
+      "de-CH": "Öl-Brennwertkessel",
+      "de-DE": "Öl-Brennwertkessel",
+      "en-US": "oil heating"
+    }
+  },
+  {
+    "id": "A0.05.00",
+    "translations": {
+      "de-CH": "Pellet-Brennwertkessel",
+      "de-DE": "Pellet-Brennwertkessel",
+      "en-US": "pellet heating"
+    }
+  },
+  {
+    "id": "A0.06.00",
+    "translations": {
+      "de-CH": "Solarthermieanlage",
+      "de-DE": "Solarthermieanlage",
+      "en-US": "solar thermal system"
+    }
+  },
+  {
+    "id": "A0.07.00",
+    "translations": {
+      "de-CH": "Wärmepumpe",
+      "de-DE": "Wärmepumpe",
+      "en-US": "heat pump"
+    }
+  },
+  {
+    "id": "A2.00.00",
+    "translations": {
+      "de-CH": "Wärme-Verteilung",
+      "de-DE": "Wärme-Verteilung",
+      "en-US": "heat distribution"
+    }
+  },
+  {
+    "id": "A2.10.00",
+    "translations": {
+      "de-CH": "Wärme-Hauptverteilung",
+      "de-DE": "Wärme-Hauptverteilung",
+      "en-US": "heat main distribution"
+    }
+  },
+  {
+    "id": "A2.20.00",
+    "translations": {
+      "de-CH": "Wärme-Unterverteilung",
+      "de-DE": "Wärme-Hauptverteilung",
+      "en-US": "heat sub distribution"
+    }
+  },
+  {
+    "id": "A2.30.00",
+    "translations": {
+      "de-CH": "Heizkreis",
+      "de-DE": "Heizkreis",
+      "en-US": "heating circuit"
+    }
+  },
+  {
+    "id": "A2.40.00",
+    "translations": {
+      "de-CH": "Druckhaltestation",
+      "de-DE": "Druckhaltestation",
+      "en-US": "pressure-maintaining station"
+    }
+  },
+  {
+    "id": "A4.00.00",
+    "translations": {
+      "de-CH": "Lüftung",
+      "de-DE": "Lüftung",
+      "en-US": "ventilation"
+    }
+  },
+  {
+    "id": "A4.01.00",
+    "translations": {
+      "de-CH": "Monoblock",
+      "de-DE": "Monoblock",
+      "en-US": "monobloc ventilation"
+    }
+  },
+  {
+    "id": "A4.02.00",
+    "translations": {
+      "de-CH": "Gaswarnanlage",
+      "de-DE": "Gaswarnanlage",
+      "en-US": "gas detection system"
+    }
+  },
+  {
+    "id": "A6.00.00",
+    "translations": {
+      "de-CH": "Klima",
+      "de-DE": "Klima",
+      "en-US": "air conditioning"
+    }
+  },
+  {
+    "id": "A6.01.00",
+    "translations": {
+      "de-CH": "Entfeuchtungsanlage",
+      "de-DE": "Entfeuchtungsanlage",
+      "en-US": "dehumidification system"
+    }
+  },
+  {
+    "id": "A6.02.00",
+    "translations": {
+      "de-CH": "Befeuchtungsanlage",
+      "de-DE": "Befeuchtungsanlage",
+      "en-US": "humidification system"
+    }
+  },
+  {
+    "id": "A8.00.00",
+    "translations": {
+      "de-CH": "Kälte-Erzeugung",
+      "de-DE": "Kälte-Erzeugung",
+      "en-US": "cold production"
+    }
+  },
+  {
+    "id": "A8.01.00",
+    "translations": {
+      "de-CH": "Fernkälte-Übergabestation",
+      "de-DE": "Fernkälte-Übergabestation",
+      "en-US": "long distance cooling transfer station"
+    }
+  },
+  {
+    "id": "A8.02.00",
+    "translations": {
+      "de-CH": "Fernkälte-Unterstation",
+      "de-DE": "Fernkälte-Unterstation",
+      "en-US": "long distance cooling sub station"
+    }
+  },
+  {
+    "id": "A8.03.00",
+    "translations": {
+      "de-CH": "Kältemaschine",
+      "de-DE": "Kältemaschine",
+      "en-US": "chiller"
+    }
+  },
+  {
+    "id": "A8.04.00",
+    "translations": {
+      "de-CH": "Klimagerät",
+      "de-DE": "Klimagerät",
+      "en-US": "air conditioning unit"
+    }
+  },
+  {
+    "id": "AA.00.00",
+    "translations": {
+      "de-CH": "Kälte-Verteilung",
+      "de-DE": "Kälte-Verteilung",
+      "en-US": "cooling distribution"
+    }
+  },
+  {
+    "id": "AA.10.00",
+    "translations": {
+      "de-CH": "Kälte-Hauptverteilung",
+      "de-DE": "Kälte-Hauptverteilung",
+      "en-US": "long distance cooling transfer distribution"
+    }
+  },
+  {
+    "id": "AA.20.00",
+    "translations": {
+      "de-CH": "Kälte-Unterverteilung",
+      "de-DE": "Kälte-Unterverteilung",
+      "en-US": "long distance cooling sub distribution"
+    }
+  },
+  {
+    "id": "AA.30.00",
+    "translations": {
+      "de-CH": "Kältekreis",
+      "de-DE": "Kältekreis",
+      "en-US": "cooling circuit"
+    }
+  },
+  {
+    "id": "AA.40.00",
+    "translations": {
+      "de-CH": "Druckhaltestation",
+      "de-DE": "Druckhaltestation",
+      "en-US": "pressure-maintaining station"
+    }
+  },
+  {
+    "id": "AC.00.00",
+    "translations": {
+      "de-CH": "Sanitär",
+      "de-DE": "Sanitär",
+      "en-US": "sanitation"
+    }
+  },
+  {
+    "id": "AC.01.00",
+    "translations": {
+      "de-CH": "Rohrbegleitheizung",
+      "de-DE": "Rohrbegleitheizung",
+      "en-US": "trace heating"
+    }
+  },
+  {
+    "id": "AC.02.00",
+    "translations": {
+      "de-CH": "Dachrinnen-Heizung",
+      "de-DE": "Dachrinnen-Heizung",
+      "en-US": "gutter heating system"
+    }
+  },
+  {
+    "id": "AC.03.00",
+    "translations": {
+      "de-CH": "Enthärtungsanlage",
+      "de-DE": "Enthärtungsanlage",
+      "en-US": "softening system"
+    }
+  },
+  {
+    "id": "AC.04.00",
+    "translations": {
+      "de-CH": "Osmoseanlage",
+      "de-DE": "Osmoseanlage",
+      "en-US": "osmosis system"
+    }
+  },
+  {
+    "id": "AC.05.00",
+    "translations": {
+      "de-CH": "Hebeanlage",
+      "de-DE": "Hebeanlage",
+      "en-US": "pumping station"
+    }
+  },
+  {
+    "id": "B0.00.00",
+    "translations": {
+      "de-CH": "Elektrische Energie-Erzeugung",
+      "de-DE": "Elektrische Energie-Erzeugung",
+      "en-US": "electrical production"
+    }
+  },
+  {
+    "id": "B0.01.00",
+    "translations": {
+      "de-CH": "Netzersatzanlage",
+      "de-DE": "Netzersatzanlage",
+      "en-US": "emergency power genset"
+    }
+  },
+  {
+    "id": "B0.02.00",
+    "translations": {
+      "de-CH": "Blockheiz-Kraftwerk (BHKW)",
+      "de-DE": "Blockheiz-Kraftwerk (BHKW)",
+      "en-US": "combined heat and power (CHP)"
+    }
+  },
+  {
+    "id": "B0.03.00",
+    "translations": {
+      "de-CH": "Brennstoffzellen-Heizgerät",
+      "de-DE": "Brennstoffzellen-Heizgerät",
+      "en-US": "fuel cell heating"
+    }
+  },
+  {
+    "id": "B0.04.00",
+    "translations": {
+      "de-CH": "Photovoltaikanlage (PVA)",
+      "de-DE": "Photovoltaikanlage (PVA)",
+      "en-US": "photovoltaic system (PVS)"
+    }
+  },
+  {
+    "id": "B0.05.00",
+    "translations": {
+      "de-CH": "Batteriespeicheranlage",
+      "de-DE": "Batteriespeicheranlage",
+      "en-US": "battery bank unit"
+    }
+  },
+  {
+    "id": "B0.06.00",
+    "translations": {
+      "de-CH": "Unterbrechungsfreie Stromversorgung (USV)",
+      "de-DE": "Unterbrechungsfreie Stromversorgung (USV)",
+      "en-US": "uninterruptible power supply (UPS)"
+    }
+  },
+  {
+    "id": "B0.07.00",
+    "translations": {
+      "de-CH": "Windenergieanlage (WEA)",
+      "de-DE": "Windenergieanlage (WEA)",
+      "en-US": "wind power system (WPS)"
+    }
+  },
+  {
+    "id": "B2.00.00",
+    "translations": {
+      "de-CH": "Elektrische Energie-Verteilung",
+      "de-DE": "Elektrische Energie-Verteilung",
+      "en-US": "electrical distribution"
+    }
+  },
+  {
+    "id": "B2.01.00",
+    "translations": {
+      "de-CH": "Blindleistungskompensationsanlage",
+      "de-DE": "Blindleistungskompensationsanlage",
+      "en-US": "power-factor correction system"
+    }
+  },
+  {
+    "id": "B2.02.00",
+    "translations": {
+      "de-CH": "Mittelspannungshauptverteilung (MSHV)",
+      "de-DE": "Mittelspannungshauptverteilung (MSHV)",
+      "en-US": "medium voltage main distribution (MVMD)"
+    }
+  },
+  {
+    "id": "B2.03.00",
+    "translations": {
+      "de-CH": "Niederspannungshauptverteilung (NSHV)",
+      "de-DE": "Niederspannungshauptverteilung (NSHV)",
+      "en-US": "low-voltage main distribution (LVMD)"
+    }
+  },
+  {
+    "id": "B2.04.00",
+    "translations": {
+      "de-CH": "Niederspannungsunterverteilung (NUV)",
+      "de-DE": "Niederspannungsunterverteilung (NUV)",
+      "en-US": "low-voltage sub-distribution (LVSD)"
+    }
+  },
+  {
+    "id": "B4.00.00",
+    "translations": {
+      "de-CH": "Elektrische Anlagen",
+      "de-DE": "Elektrische Anlagen",
+      "en-US": "electrical systems"
+    }
+  },
+  {
+    "id": "B4.01.00",
+    "translations": {
+      "de-CH": "Fahrzeugladestation",
+      "de-DE": "Fahrzeugladestation",
+      "en-US": "electric vehicle charging station"
+    }
+  },
+  {
+    "id": "B6.00.00",
+    "translations": {
+      "de-CH": "Gebäudeautomation",
+      "de-DE": "Gebäudeautomation",
+      "en-US": "building automation"
+    }
+  },
+  {
+    "id": "B8.00.00",
+    "translations": {
+      "de-CH": "Gebäudeleitsystem",
+      "de-DE": "Gebäudeleitsystem",
+      "en-US": "building management system"
+    }
+  },
+  {
+    "id": "B8.01.00",
+    "translations": {
+      "de-CH": "Störmeldeanlage",
+      "de-DE": "Störmeldeanlage",
+      "en-US": "incident messaging system"
+    }
+  },
+  {
+    "id": "BA.00.00",
+    "translations": {
+      "de-CH": "Raumautomation",
+      "de-DE": "Raumautomation",
+      "en-US": "building automation"
+    }
+  },
+  {
+    "id": "BA.01.00",
+    "translations": {
+      "de-CH": "Wetterstation",
+      "de-DE": "Wetterstation",
+      "en-US": "weather station"
+    }
+  },
+  {
+    "id": "BA.10.00",
+    "translations": {
+      "de-CH": "Beleuchtung",
+      "de-DE": "Beleuchtung",
+      "en-US": "lighting"
+    }
+  },
+  {
+    "id": "BA.20.00",
+    "translations": {
+      "de-CH": "Beschattung",
+      "de-DE": "Beschattung",
+      "en-US": "shading"
+    }
+  },
+  {
+    "id": "BC.00.00",
+    "translations": {
+      "de-CH": "Digitale Services",
+      "de-DE": "Digitale Services",
+      "en-US": "digital services"
+    }
+  },
+  {
+    "id": "BC.01.00",
+    "translations": {
+      "de-CH": "Analyzer für Heizung",
+      "de-DE": "Analyzer für Heizung",
+      "en-US": "analyzer for heating"
+    }
+  },
+  {
+    "id": "BC.02.00",
+    "translations": {
+      "de-CH": "Analyzer für Brauchwarmwasser",
+      "de-DE": "Analyzer für Brauchwarmwasser",
+      "en-US": "analyzer for warm water"
+    }
+  },
+  {
+    "id": "BC.03.00",
+    "translations": {
+      "de-CH": "Monitoring",
+      "de-DE": "Monitoring",
+      "en-US": "monitoring"
+    }
+  },
+  {
+    "id": "C0.00.00",
+    "translations": {
+      "de-CH": "Beförderungs- und Transport",
+      "de-DE": "Beförderungs- und Transport",
+      "en-US": "transportation systems"
+    }
+  },
+  {
+    "id": "C0.01.00",
+    "translations": {
+      "de-CH": "Personenaufzug",
+      "de-DE": "Personenaufzug",
+      "en-US": "passenger elevator"
+    }
+  },
+  {
+    "id": "C0.02.00",
+    "translations": {
+      "de-CH": "Lastenaufzug",
+      "de-DE": "Lastenaufzug",
+      "en-US": "goods elevator"
+    }
+  },
+  {
+    "id": "C0.03.00",
+    "translations": {
+      "de-CH": "Rolltreppenanlage",
+      "de-DE": "Fahrtreppenanlage",
+      "en-US": "escalator"
+    }
+  },
+  {
+    "id": "C0.04.00",
+    "translations": {
+      "de-CH": "Anpassrampe",
+      "de-DE": "Anpassrampe",
+      "en-US": "dock leveler"
+    }
+  },
+  {
+    "id": "C0.10.00",
+    "translations": {
+      "de-CH": "Fassadenbefahranlage",
+      "de-DE": "Fassadenbefahranlage",
+      "en-US": "building cradle"
+    }
+  },
+  {
+    "id": "C0.20.00",
+    "translations": {
+      "de-CH": "Förderanlage",
+      "de-DE": "Förderanlage",
+      "en-US": "conveying system"
+    }
+  },
+  {
+    "id": "C2.00.00",
+    "translations": {
+      "de-CH": "Sicherheit",
+      "de-DE": "Sicherheit",
+      "en-US": "safety systems"
+    }
+  },
+  {
+    "id": "C2.01.00",
+    "translations": {
+      "de-CH": "Türe",
+      "de-DE": "Türe",
+      "en-US": "door"
+    }
+  },
+  {
+    "id": "C2.02.00",
+    "translations": {
+      "de-CH": "Tor",
+      "de-DE": "Tor",
+      "en-US": "gate"
+    }
+  },
+  {
+    "id": "C2.10.00",
+    "translations": {
+      "de-CH": "Schrankenanlage",
+      "de-DE": "Schrankenanlage",
+      "en-US": "barrier system"
+    }
+  },
+  {
+    "id": "C2.20.00",
+    "translations": {
+      "de-CH": "Notlichtanlage (NLA)",
+      "de-DE": "Notlichtanlage (NLA)",
+      "en-US": "emergency light system"
+    }
+  },
+  {
+    "id": "C2.21.00",
+    "translations": {
+      "de-CH": "Sicherheitsbeleuchtungsanlage",
+      "de-DE": "Sicherheitsbeleuchtungsanlage",
+      "en-US": "safety lighting system"
+    }
+  },
+  {
+    "id": "C2.30.00",
+    "translations": {
+      "de-CH": "Videoüberwachungsanlage (VÜA)",
+      "de-DE": "Videoüberwachungsanlage (VÜA)",
+      "en-US": "closed-circuit television system (CCTV)"
+    }
+  },
+  {
+    "id": "C2.40.00",
+    "translations": {
+      "de-CH": "Zutrittskontrollanlage (ZuKo)",
+      "de-DE": "Zutrittskontrollanlage (ZuKo)",
+      "en-US": "access control system"
+    }
+  },
+  {
+    "id": "C2.50.00",
+    "translations": {
+      "de-CH": "Einbruchmeldeanlage (EMA)",
+      "de-DE": "Einbruchmeldeanlage (EMA)",
+      "en-US": "intrusion detection system"
+    }
+  },
+  {
+    "id": "C2.60.00",
+    "translations": {
+      "de-CH": "Überfallalarmanlage",
+      "de-DE": "Überfallalarmanlage",
+      "en-US": "panic and attack alarm system"
+    }
+  },
+  {
+    "id": "C2.61.00",
+    "translations": {
+      "de-CH": "Tresor",
+      "de-DE": "Tresor",
+      "en-US": "tresor"
+    }
+  },
+  {
+    "id": "C2.70.00",
+    "translations": {
+      "de-CH": "Evakuationsanlage (EVAK)",
+      "de-DE": "Evakuationsanlage (EVAK)",
+      "en-US": "evacuation and paging system"
+    }
+  },
+  {
+    "id": "C2.71.00",
+    "translations": {
+      "de-CH": "Personenschutzsystem",
+      "de-DE": "Personenschutzsystem",
+      "en-US": "personnel safety system"
+    }
+  },
+  {
+    "id": "C4.00.00",
+    "translations": {
+      "de-CH": "Brandschutz",
+      "de-DE": "Brandschutz",
+      "en-US": "smoke and fire protection"
+    }
+  },
+  {
+    "id": "C4.01.00",
+    "translations": {
+      "de-CH": "Brandmeldeanlage (BMA)",
+      "de-DE": "Brandmeldeanlage (BMA)",
+      "en-US": "fire alarm system"
+    }
+  },
+  {
+    "id": "C4.02.00",
+    "translations": {
+      "de-CH": "Rauchschutzdruckanlage (RDA)",
+      "de-DE": "Rauchschutzdruckanlage (RDA)",
+      "en-US": "smoke protection pressuration system"
+    }
+  },
+  {
+    "id": "C4.03.00",
+    "translations": {
+      "de-CH": "Rauch- und Wärmeabzugsanlage (RWA)",
+      "de-DE": "Rauch- und Wärmeabzugsanlage (RWA)",
+      "en-US": "smoke and heat protection system (SHE)"
+    }
+  },
+  {
+    "id": "FE.00.00",
+    "translations": {
+      "de-CH": "nutzerspezifische Systeme",
+      "de-DE": "nutzerspezifische Systeme",
+      "en-US": "user specific Systems"
+    }
+  },
+  {
+    "id": "FE.00.00",
+    "translations": {
+      "de-CH": "Parkleitsystem",
+      "de-DE": "Parkleitsystem",
+      "en-US": "parking guidance system"
+    }
+  },
+  {
+    "id": "FE.10.00",
+    "translations": {
+      "de-CH": "Paketbox-System",
+      "de-DE": "Paketbox-System",
+      "en-US": "parcel box system"
+    }
+  },
+  {
+    "id": "FE.20.00",
+    "translations": {
+      "de-CH": "Gegensprechanlage",
+      "de-DE": "Gegensprechanlage",
+      "en-US": "intercom system"
+    }
+  },
+  {
+    "id": "FE.21.00",
+    "translations": {
+      "de-CH": "Video-Gegensprechanlage",
+      "de-DE": "Video-Gegensprechanlage",
+      "en-US": "video intercom system"
+    }
+  },
+  {
+    "id": "FE.20.00",
+    "translations": {
+      "de-CH": "Besucherinformationssystem",
+      "de-DE": "Besucherinformationssystem",
+      "en-US": "visitor information system"
+    }
+  },
+  {
+    "id": "FE.21.00",
+    "translations": {
+      "de-CH": "Raumreservationssystem",
+      "de-DE": "Raumreservationssystem",
+      "en-US": "room reservation system"
+    }
+  },
+  {
+    "id": "FE.22.00",
+    "translations": {
+      "de-CH": "Multimediaanlage",
+      "de-DE": "Multimediaanlage",
+      "en-US": "multimedia system"
+    }
+  },
+  {
+    "id": "FE.30.00",
+    "translations": {
+      "de-CH": "Personensuchanlage",
+      "de-DE": "Personensuchanlage",
+      "en-US": "personal paging system"
+    }
+  },
+  {
+    "id": "FE.31.00",
+    "translations": {
+      "de-CH": "Rufanlage",
+      "de-DE": "Rufanlage",
+      "en-US": "call system"
+    }
+  },
+  {
+    "id": "FE.40.00",
+    "translations": {
+      "de-CH": "Entsorgungsanlage",
+      "de-DE": "Entsorgungsanlage",
+      "en-US": "waste disposal system"
+    }
+  },
+  {
+    "id": "FE.50.00",
+    "translations": {
+      "de-CH": "Druckluftanlage",
+      "de-DE": "Druckluftanlage",
+      "en-US": "compressed air system"
     }
   }
 ]
