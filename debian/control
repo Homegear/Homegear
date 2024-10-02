@@ -8,7 +8,7 @@ Homepage: https://homegear.eu
 
 Package: homegear
 Architecture: any
-Depends: ${shlibs:Depends}, ${misc:Depends}, libhomegear-base (= <BASELIBVER>), libhomegear-node, libhomegear-ipc, nodejs-homegear, wget, libsqlite3-0 (>= 3.7.13), libreadline8t64 | libreadline8 | libreadline7 | libreadline6, adduser (>= 3.113), libgcrypt20, libgnutlsxx30 | libgnutlsxx28, libgpg-error0 (>= 1.10), unzip (>= 6.0), p7zip-full (>= 9.0), procps, libxslt1.1, libedit2, libenchant-2-2 | libenchant1c2a, libqdbm14, libltdl7, zlib1g, libtinfo5 | libtinfo6, libgmp10, libxml2, libssl3 | libssl1.1 | libssl1.0.0, openssl, libcurl3-gnutls, zlib1g, libicu52 | libicu55 | libicu57 | libicu60 | libicu63 | libicu66 | libicu67 | libicu70 | libicu72, libonig2 | libonig4 | libonig5, libsodium18 | libsodium23, build-essential
+Depends: ${shlibs:Depends}, ${misc:Depends}, libhomegear-base (= <BASELIBVER>), libhomegear-node, libhomegear-ipc, nodejs-homegear, wget, libsqlite3-0 (>= 3.7.13), libreadline8t64 | libreadline8 | libreadline7 | libreadline6, adduser (>= 3.113), libgcrypt20, libgnutls30t64 | libgnutls30, libgpg-error0 (>= 1.10), unzip (>= 6.0), p7zip-full (>= 9.0), procps, libxslt1.1, libedit2, libenchant-2-2 | libenchant1c2a, libqdbm14, libltdl7, zlib1g, libtinfo5 | libtinfo6, libgmp10, libxml2, libssl3 | libssl1.1 | libssl1.0.0, openssl, libcurl3-gnutls, zlib1g, libicu74 | libicu72 | libicu70 | libicu67 | libicu66 | libicu63 | libicu60 | libicu57 | libicu55 | libicu52, libonig2 | libonig4 | libonig5, libsodium18 | libsodium23, build-essential
 Replaces: homegear (<< 0.6)
 Breaks: homegear (<< 0.6)
 Description: Interface program to your smart home devices
