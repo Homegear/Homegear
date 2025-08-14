@@ -880,7 +880,7 @@ void ScriptEngineServer::broadcastEvent(std::string &source, uint64_t id, int32_
 
       if (!peer) return;
 
-      std::shared_ptr<std::vector<std::string>> newVariables;
+      std::shared_ptr<std::vector<std::string>> newVariables = std::make_shared<std::vector<std::string>>();
       BaseLib::PArray newValues = std::make_shared<BaseLib::Array>();
       newVariables->reserve(variables->size());
       newValues->reserve(values->size());
