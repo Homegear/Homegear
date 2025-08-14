@@ -23,7 +23,7 @@ if test -z $1; then
 fi
 
 if test -z $2; then
-	echo "Please provide a valid Linux distribution version (buster, bionic, ...)."	
+	echo "Please provide a valid Linux distribution version (buster, bionic, ...)."
 	print_usage
 	exit 1
 fi
@@ -130,19 +130,19 @@ if [ "$distver" == "stretch" ]; then
 	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
 fi
 
-if [ "$distver" == "bullseye" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
+if [ "$distver" == "trixie" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "buster" ] || [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ]; then
 	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
 		export MAN_DISABLE_SECCOMP=1
 	fi
 fi
 
-if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ]; then
+if [ "$distver" == "noble" ] ||[ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 fi
 
 chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ]  || [ "$distver" == "bullseye" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
@@ -157,16 +157,18 @@ else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
 fi
 
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 
-if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ]; then
 	#When using the default "fakeroot-sysv" PHP package creation fails
 	chroot $rootfs update-alternatives --install /usr/bin/fakeroot fakeroot /usr/bin/fakeroot-tcp 100
 fi
 
-if [ "$distver" == "jammy" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "trixie" ]; then
+  echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu noble main" > $rootfs/etc/apt/sources.list.d/php8-src.list
+elif [ "$distver" == "jammy" ] || [ "$distver" == "bookworm" ]; then
   echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu jammy main" > $rootfs/etc/apt/sources.list.d/php8-src.list
 elif [ "$distver" == "focal" ] || [ "$distver" == "bullseye" ]; then
 	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu focal main" > $rootfs/etc/apt/sources.list.d/php8-src.list
@@ -198,7 +200,7 @@ rm $rootfs/php-gpg.key
 chroot $rootfs apt-get update
 
 mkdir $rootfs/PHPBuild
-chroot $rootfs bash -c "cd /PHPBuild && apt-get source php8.0"
+chroot $rootfs bash -c "cd /PHPBuild && apt-get source php8.4"
 cd $rootfs/PHPBuild
 tar -xf php8*debian.tar.xz
 cd ..
@@ -264,7 +266,7 @@ rm -Rf /PHPBuild/lib*
 
 cd /PHPBuild
 apt-get update
-apt-get source php8.0
+apt-get source php8.4
 rm php8*.tar.*
 rm php8*.dsc
 cd php8*
@@ -277,13 +279,15 @@ cd parallel
 # Switch to release, once PHP 8 is supported
 # git checkout release
 git checkout develop
+# ZEND_JMPZNZ seems to be removed from PHP source
+sed -i 's/case ZEND_JMPZNZ:/#ifdef ZEND_JMPZNZ\ncase ZEND_JMPZNZ:\n#endif/g' src/cache.c
 cd ..
 # Add Homegear to allowed OPcode cache modules
 sed -i 's/strcmp(sapi_module.name, "cli") == 0/strcmp(sapi_module.name, "homegear") == 0/g' opcache/ZendAccelerator.c
 sed -i '/.*case ZEND_HANDLE_STREAM:.*/a\\t\t\tif (strcmp(sapi_module.name, "homegear") == 0) { if (zend_get_stream_timestamp(file_handle->filename, &statbuf) != SUCCESS) return 0; else break; }' opcache/ZendAccelerator.c
 cd ..
 autoconf
-version=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d ":" -f 2 | cut -d "+" -f 1 | cut -d "-" -f 1`
+version=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 1`
 revision=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 2 | cut -d "~" -f 1`
 rm -Rf debian
 cp -R /PHPBuild/debian .
