@@ -157,7 +157,6 @@ if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ]; then
 	chroot $rootfs update-alternatives --install /usr/bin/fakeroot fakeroot /usr/bin/fakeroot-tcp 100
 fi
 
-mkdir -p "$rootfs/etc/apt/keyrings"
 cat > "$rootfs/etc/apt/trusted.gpg.d/ondrej-ubuntu-php.asc" <<'EOF'
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: Hockeypuck 2.2
