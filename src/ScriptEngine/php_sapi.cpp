@@ -43,8 +43,8 @@
 #if PHP_VERSION_ID < 70100
 #error "PHP 7.2 is required as ZTS in versions 7.0 and 7.1 is broken."
 #endif
-#if PHP_VERSION_ID >= 80300
-#error "PHP 8.3 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
+#if PHP_VERSION_ID >= 80500
+#error "PHP 8.5 or greater is not officially supported yet. Please check the following points (only visible in source code) before removing this line."
 /*
  * 1. Compare initialization with the initialization in one of the SAPI modules (e. g. "php_embed_init()" in "sapi/embed/php_embed.c").
  * 2. Check if content of marked part in hg_stream_open() equals zend_stream_open() in zend_stream.c
@@ -550,10 +550,9 @@ zend_result hg_stream_open(zend_file_handle *handle) {
 #else
     zend_string *opened_path = nullptr;
     auto fp = zend_fopen(handle->filename, &opened_path);
-    //Don't continue when fp is invalid, i.e. the file could not be opened. This differs from zend_stream_open. But
-    //when calling zend_stream_init_fp() after returning, PHP crashes with a SEGFAULT on "include" of a non-existing
-    //file.
-    if (!fp) return FAILURE;
+    if (!fp) {
+      return FAILURE;
+    }
 #if PHP_VERSION_ID < 80200
     zend_stream_init_fp(handle, fp, filename);
     handle->opened_path = opened_path;

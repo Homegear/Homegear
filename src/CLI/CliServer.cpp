@@ -653,7 +653,6 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       GD::scriptEngineServer->executeScript(scriptInfo, false);
 
       std::unique_lock<std::mutex> waitLock(_waitMutex);
-      int64_t startTime = BaseLib::HelperFunctions::getTime();
       while (!_waitConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&] {
         return _scriptFinished;
       }));
@@ -695,7 +694,6 @@ BaseLib::PVariable CliServer::generalCommand(std::string &command) {
       GD::scriptEngineServer->executeScript(scriptInfo, false);
 
       std::unique_lock<std::mutex> waitLock(_waitMutex);
-      int64_t startTime = BaseLib::HelperFunctions::getTime();
       while (!_waitConditionVariable.wait_for(waitLock, std::chrono::milliseconds(1000), [&] {
         return _scriptFinished;
       }));
