@@ -157,7 +157,7 @@ if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ]; then
 	chroot $rootfs update-alternatives --install /usr/bin/fakeroot fakeroot /usr/bin/fakeroot-tcp 100
 fi
 
-cat > "$rootfs/etc/apt/trusted.gpg.d/ondrej-ubuntu-php.asc" <<'EOF'
+cat > "$rootfs/etc/apt/keyrings/ondrej-ubuntu-php.asc" <<'EOF'
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: Hockeypuck 2.2
 
@@ -189,12 +189,12 @@ v38=
 =+F9r
 -----END PGP PUBLIC KEY BLOCK-----
 EOF
-chmod 644 "$rootfs/etc/apt/trusted.gpg.d/ondrej-ubuntu-php.asc"
+chmod 644 "$rootfs/etc/apt/keyrings/ondrej-ubuntu-php.asc"
 
 if [ "$distver" == "noble" ] || [ "$distver" == "trixie" ]; then
-  echo "deb-src [signed-by=/etc/apt/trusted.gpg.d/ondrej-ubuntu-php.asc] http://ppa.launchpad.net/ondrej/php/ubuntu noble main" > "$rootfs/etc/apt/sources.list.d/php8-src.list"
+  echo "deb-src [signed-by=/etc/apt/keyrings/ondrej-ubuntu-php.asc] http://ppa.launchpad.net/ondrej/php/ubuntu noble main" > "$rootfs/etc/apt/sources.list.d/php8-src.list"
 elif [ "$distver" == "jammy" ] || [ "$distver" == "bookworm" ]; then
-  echo "deb-src [signed-by=/etc/apt/trusted.gpg.d/ondrej-ubuntu-php.asc] http://ppa.launchpad.net/ondrej/php/ubuntu jammy main" > "$rootfs/etc/apt/sources.list.d/php8-src.list"
+  echo "deb-src [signed-by=/etc/apt/keyrings/ondrej-ubuntu-php.asc] http://ppa.launchpad.net/ondrej/php/ubuntu jammy main" > "$rootfs/etc/apt/sources.list.d/php8-src.list"
 fi
 
 chroot $rootfs apt-get update
