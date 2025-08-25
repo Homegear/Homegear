@@ -23,7 +23,7 @@ if test -z $1; then
 fi
 
 if test -z $2; then
-	echo "Please provide a valid Linux distribution version (buster, bionic, ...)."	
+	echo "Please provide a valid Linux distribution version (trixie, noble, ...)."
 	print_usage
 	exit 1
 fi
@@ -125,24 +125,19 @@ EOF
 #Fix debootstrap base package errors
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 
-if [ "$distver" == "stretch" ]; then
-	chroot $rootfs apt-get update
-	chroot $rootfs apt-get -y --allow-unauthenticated install debian-keyring debian-archive-keyring
-fi
-
-if [ "$distver" == "bullseye" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
+if [ "$distver" == "trixie" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "noble" ] || [ "$distver" == "jammy" ]; then
 	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
 		export MAN_DISABLE_SECCOMP=1
 	fi
 fi
 
-if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ]; then
+if [ "$distver" == "noble" ] ||[ "$distver" == "jammy" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 fi
 
 chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ]  || [ "$distver" == "bullseye" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ]; then
+if [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
@@ -151,54 +146,61 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ca-certificates
 DEBIAN_FRONTEND=noninteractive chroot $rootfs sed -i 's/mozilla\/DST_Root_CA_X3.crt/!mozilla\/DST_Root_CA_X3.crt/g' /etc/ca-certificates.conf
 DEBIAN_FRONTEND=noninteractive chroot $rootfs update-ca-certificates --fresh
 
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ];  then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr
-else
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
-fi
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
 
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "jessie" ] || [ "$distver" == "wheezy" ] || [ "$distver" == "xenial" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ]; then
+if [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 
-if [ "$distver" == "jammy" ] || [ "$distver" == "focal" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ]; then
 	#When using the default "fakeroot-sysv" PHP package creation fails
 	chroot $rootfs update-alternatives --install /usr/bin/fakeroot fakeroot /usr/bin/fakeroot-tcp 100
 fi
 
-if [ "$distver" == "jammy" ]; then
-  echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu jammy main" > $rootfs/etc/apt/sources.list.d/php8-src.list
-elif [ "$distver" == "focal" ] || [ "$distver" == "bullseye" ]; then
-	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu focal main" > $rootfs/etc/apt/sources.list.d/php8-src.list
-elif [ "$distver" == "bionic" ] || [ "$distver" == "buster" ]; then
-	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu bionic main" > $rootfs/etc/apt/sources.list.d/php8-src.list
-elif [ "$distver" == "trusty" ]; then
-	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu trusty main" > $rootfs/etc/apt/sources.list.d/php8-src.list
-else
-	echo "deb-src http://ppa.launchpad.net/ondrej/php/ubuntu xenial main" > $rootfs/etc/apt/sources.list.d/php8-src.list
-fi
-
-cat > "$rootfs/php-gpg.key" <<'EOF'
+cat > "$rootfs/etc/apt/keyrings/ondrej-ubuntu-php.asc" <<'EOF'
 -----BEGIN PGP PUBLIC KEY BLOCK-----
-Version: GnuPG v1
+Version: Hockeypuck 2.2
 
-mI0ESX35nAEEALKDCUDVXvmW9n+T/+3G1DnTpoWh9/1xNaz/RrUH6fQKhHr568F8
-hfnZP/2CGYVYkW9hxP9LVW9IDvzcmnhgIwK+ddeaPZqh3T/FM4OTA7Q78HSvR81m
-Jpf2iMLm/Zvh89ZsmP2sIgZuARiaHo8lxoTSLtmKXsM3FsJVlusyewHfABEBAAG0
-H0xhdW5jaHBhZCBQUEEgZm9yIE9uZMWZZWogU3Vyw72ItgQTAQIAIAUCSX35nAIb
-AwYLCQgHAwIEFQIIAwQWAgMBAh4BAheAAAoJEE9OoKrlJnpsQjYD/jW1NlIFAlT6
-EvF2xfVbkhERii9MapjaUsSso4XLCEmZdEGX54GQ01svXnrivwnd/kmhKvyxCqiN
-LDY/dOaK8MK//bDI6mqdKmG8XbP2vsdsxhifNC+GH/OwaDPvn1TyYB653kwyruCG
-FjEnCreZTcRUu2oBQyolORDl+BmF4DjL
-=R5tk
+xsFNBGYo0vEBEAC0Semxy5I2b8exRUxJfTKkHR4f5uyS0dTd9vYgMI5T3gsa7ypH
+HtE+GiZC+T9m/F9h66+XJMxhuNsKRs7T2In5NSeso9H/ytlSTayUaBtCFfRp6y6b
+6ozuRBfqYJGxhjAnIzvNF/Wpp2BvfQm3OrQ7uJJrt5IvzLDC4jPxl/Xs3sTT+Hbk
+bkKKprZ3xmy2enuwBaNWR/CUtAz3hbkzL1kGbhX9m3QidFJagVVdDw3aNEwo8ush
+djWfF+BajNvpDFYJKBGQbCeagB753Baa5yIN62x+THLnLiKTMDS1e7U0ZDiV9671
+noTbtN5TeZeyfsEmeZ8X60x11JIP3yYHYZT70/DyTYX3WC9yQFyIgVOfRlGklMKI
+k3TLMmtq8w5Hz1vovwzV7PzaQnmY+uNP2ZbAP4fJ3iFAj0L+u0i1nOFgTy0Lq058
+O/FjRrQxuceDDCF+9ThspXMw3Puvz8giuBDCdEda84uC7XWMdqgz/maLfFQjAmyP
+Ixi1EMxMlHYyZajpR1cdCfrAIQlnQjHSWmyeCFgXPPfRA71aCcJ7oSrDjogW6Ahd
+HRkQRKf1FF9BFzycgSQotfR+7CKfPQh1kghufM9W/spARzA709nGZjXJzgEJLQd3
+CDB6dIIxT/0YI36h3Qgfmiiw4twO24MMEqEEPIELz2WJKeWGkdQdcekpxQARAQAB
+zR9MYXVuY2hwYWQgUFBBIGZvciBPbmTFmWVqIFN1csO9wsGOBBMBCgA4FiEEuNx+
+U5RmVu+85MHdcdrqq0rUyrYFAmYo0vECGwMFCwkIBwIGFQoJCAsCBBYCAwECHgEC
+F4AACgkQcdrqq0rUyrYOPQ/+IArA4s1J3op/w7cXek0ieFHWHFDrxPYS+78/LF/J
+LoYZw0nIU5Ovr+LzehFMIQU6esgPXwbeCVgwLwat57augAkAYWT0UzH5dE6RKAGr
+C2vsHWVfPhQn6UndfzwXc0mTLGQni25aQaZ6k60Dbm/vblejrTQrtAUWoMO3Z1cr
+NDGJ3Z9DCxtr2o9gRYUI6HwLHJtobTIeI5xsr5x+GvXiIAVCPa3ZEuRL6jMQfqfS
+C43mpuiS1kGgsnQLs2DbN7EFCfiJoNX1QzZu25zg+IS9PXbCJnheZWnH0rwUSb/N
+hZPcSefGlNlhr824OfT30v79hQnw59XbsfV270O9jPbD4kttN+OiszbU66zsuiOh
+BO46XCckQPqDkBMw56GPFuVrQgGb1thXvn67URJgPyJhwauBWKPNAJ9Ojuo+yVq/
+hdR1VNWThXQbZgaGSWrbjt6FdYtQb9VX88uu5gFDmr180HogHNUDUcqNLLdnjfFs
+4DyJlusQ5I/a7cQ7nlkNgxAmHszwO/mGLBuGljDUYkwZDW9nqP1Q5Q2jMtrhgXvR
+2SOtufvecUbB7+eoRSaOnu7CNMATG6LocFEMzhKUde1uZTfWSqnYEcdqoFJMi46y
+qaNxhiNLsQ5OBMbgSp2zCbQxRBdITMVvBR5YjCetUIGEs6T1yQ5wh5Xpoi34ShHn
+v38=
+=+F9r
 -----END PGP PUBLIC KEY BLOCK-----
 EOF
-chroot $rootfs apt-key add /php-gpg.key
-rm $rootfs/php-gpg.key
+chmod 644 "$rootfs/etc/apt/keyrings/ondrej-ubuntu-php.asc"
+
+if [ "$distver" == "noble" ] || [ "$distver" == "trixie" ]; then
+  echo "deb-src [signed-by=/etc/apt/keyrings/ondrej-ubuntu-php.asc] http://ppa.launchpad.net/ondrej/php/ubuntu noble main" > "$rootfs/etc/apt/sources.list.d/php8-src.list"
+elif [ "$distver" == "jammy" ] || [ "$distver" == "bookworm" ]; then
+  echo "deb-src [signed-by=/etc/apt/keyrings/ondrej-ubuntu-php.asc] http://ppa.launchpad.net/ondrej/php/ubuntu jammy main" > "$rootfs/etc/apt/sources.list.d/php8-src.list"
+fi
+
 chroot $rootfs apt-get update
 
 mkdir $rootfs/PHPBuild
-chroot $rootfs bash -c "cd /PHPBuild && apt-get source php8.0"
+chroot $rootfs bash -c "cd /PHPBuild && apt-get source php8.4"
 cd $rootfs/PHPBuild
 tar -xf php8*debian.tar.xz
 cd ..
@@ -264,7 +266,7 @@ rm -Rf /PHPBuild/lib*
 
 cd /PHPBuild
 apt-get update
-apt-get source php8.0
+apt-get source php8.4
 rm php8*.tar.*
 rm php8*.dsc
 cd php8*
@@ -277,13 +279,15 @@ cd parallel
 # Switch to release, once PHP 8 is supported
 # git checkout release
 git checkout develop
+# ZEND_JMPZNZ seems to be removed from PHP source
+sed -i 's/case ZEND_JMPZNZ:/#ifdef ZEND_JMPZNZ\ncase ZEND_JMPZNZ:\n#endif/g' src/cache.c
 cd ..
 # Add Homegear to allowed OPcode cache modules
 sed -i 's/strcmp(sapi_module.name, "cli") == 0/strcmp(sapi_module.name, "homegear") == 0/g' opcache/ZendAccelerator.c
-sed -i '/.*case ZEND_HANDLE_STREAM:.*/a\\t\t\tif (strcmp(sapi_module.name, "homegear") == 0) { if (zend_get_stream_timestamp(file_handle->filename, &statbuf) != SUCCESS) return 0; else break; }' opcache/ZendAccelerator.c
+sed -i '/.*case ZEND_HANDLE_STREAM:.*/a\\t\t\tif (strcmp(sapi_module.name, "homegear") == 0) { if (zend_get_stream_timestamp(ZSTR_VAL(file_handle->filename), &statbuf) != SUCCESS) return 0; else break; }' opcache/ZendAccelerator.c
 cd ..
 autoconf
-version=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d ":" -f 2 | cut -d "+" -f 1 | cut -d "-" -f 1`
+version=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 1`
 revision=`head -n 1 debian/changelog | cut -d "(" -f 2 | cut -d ")" -f 1 | cut -d "+" -f 1 | cut -d "-" -f 2 | cut -d "~" -f 1`
 rm -Rf debian
 cp -R /PHPBuild/debian .

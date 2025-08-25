@@ -19,7 +19,7 @@ override_dh_auto_install:
 	mkdir -p $(CURDIR)/debian/php8-homegear-dev/usr/include/php8-homegear
 	cp -r /usr/include/php8-homegear/php/*/* $(CURDIR)/debian/php8-homegear-dev/usr/include/php8-homegear
 	mkdir -p $(CURDIR)/debian/php8-homegear-dev/usr/lib
-	cp /usr/share/homegear/php/lib/libphp.a $(CURDIR)/debian/php8-homegear-dev/usr/lib/libphp8-homegear.a
+	cp /usr/share/homegear/php/libphp.a $(CURDIR)/debian/php8-homegear-dev/usr/lib/libphp8-homegear.a
 	mkdir -p $(CURDIR)/debian/php8-homegear-dev/usr/share/homegear/php-dev/$(PHP_ZEND_VERSION)
 	cp /usr/share/homegear/php/$(PHP_ZEND_VERSION)/opcache.* $(CURDIR)/debian/php8-homegear-dev/usr/share/homegear/php-dev/$(PHP_ZEND_VERSION)/
 %:

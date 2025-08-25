@@ -135,20 +135,20 @@ if [ "$distver" == "stretch" ]; then
 	[ $? -ne 0 ] && exit 1
 fi
 
-if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ]; then
 	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
 		export MAN_DISABLE_SECCOMP=1
 	fi
 fi
 
-if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 	[ $? -ne 0 ] && exit 1
 fi
 
 chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	[ $? -ne 0 ] && exit 1
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
@@ -159,19 +159,17 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install apt-transport-h
 DEBIAN_FRONTEND=noninteractive chroot $rootfs sed -i 's/mozilla\/DST_Root_CA_X3.crt/!mozilla\/DST_Root_CA_X3.crt/g' /etc/ca-certificates.conf
 DEBIAN_FRONTEND=noninteractive chroot $rootfs update-ca-certificates --fresh
 
+wget -O "$rootfs/etc/apt/keyrings/homegear.asc" https://apt.homegear.eu/Release.key
+
 repodist=$distlc
 if [[ $distlc == "raspbian" ]]; then
   repodist="raspberry_pi_os"
 fi
-echo "deb https://apt.homegear.eu/${repodist}/${distver}/homegear/stable/ ${distver} main" > $rootfs/etc/apt/sources.list.d/homegear.list
-
-wget -P $rootfs https://apt.homegear.eu/Release.key
-chroot $rootfs apt-key add Release.key
-rm $rootfs/Release.key
+echo "deb [signed-by=/etc/apt/keyrings/homegear.asc] https://apt.homegear.eu/${repodist}/${distver}/homegear/stable/ ${distver} main" > $rootfs/etc/apt/sources.list.d/homegear.list
 
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
 # python: Needed by homegear-ui's npm on some systems
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip binutils debhelper devscripts automake autoconf libtool cmake sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php8-homegear-dev nodejs-homegear libxslt1-dev libedit-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full ntp libavahi-common-dev libavahi-client-dev libicu-dev libonig-dev libsodium-dev libpython3-dev python3-all python3-setuptools dh-python uuid-dev libgpgme-dev check
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip binutils debhelper devscripts automake autoconf libtool cmake sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php8-homegear-dev nodejs-homegear libxslt1-dev libedit-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full libavahi-common-dev libavahi-client-dev libicu-dev libonig-dev libsodium-dev libpython3-dev python3-all python3-setuptools dh-python uuid-dev libgpgme-dev check
 [ $? -ne 0 ] && exit 1
 
 # {{{ Packages for doorctrl
@@ -181,7 +179,7 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip 
 #fi
 # }}}
 
-if [ "$distver" == "bookworm" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
+if [ "$distver" == "trixie" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libenchant-2-dev
 	[ $? -ne 0 ] && exit 1
 else
@@ -189,12 +187,7 @@ else
 	[ $? -ne 0 ] && exit 1
 fi
 
-if [ "$distver" != "noble" ] && [ "$distver" != "jammy" ] && [ "$distver" != "focal" ] && [ "$distver" != "bionic" ] && [ "$distver" != "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install insserv
-	[ $? -ne 0 ] && exit 1
-fi
-
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ];  then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ];  then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install default-libmysqlclient-dev dirmngr
 	[ $? -ne 0 ] && exit 1
 else
@@ -204,7 +197,7 @@ fi
 
 # {{{ GCC, GCrypt, GNUTLS, Curl
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
-if [ "$distver" == "noble" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "trixie" ]; then
   DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgnutls30t64 libnsl-dev
   [ $? -ne 0 ] && exit 1
 elif [ "$distver" == "bookworm" ]; then
@@ -214,14 +207,14 @@ else
   DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgnutlsxx28
   [ $? -ne 0 ] && exit 1
 fi
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 	[ $? -ne 0 ] && exit 1
 fi
 # }}}
 
 # {{{ Readline
-if [ "$distver" == "noble" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "trixie" ]; then
   DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline8t64 libreadline-dev
   [ $? -ne 0 ] && exit 1
 elif [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then
@@ -287,16 +280,12 @@ function createPackage {
 	fi' $sourcePath/debian/preinst
 	fi
 	sed -i "s/<BASELIBVER>/$version-$revision/g" $sourcePath/debian/control
-	if [ "$distributionVersion" != "stretch" ] && [ "$distributionVersion" != "buster" ] && [ "$distributionVersion" != "bullseye" ] && [ "$distributionVersion" != "bookworm" ] && [ "$distributionVersion" != "bionic" ] && [ "$distributionVersion" != "focal" ] && [ "$distributionVersion" != "jammy" ] && [ "$distributionVersion" != "noble" ]; then
-		sed -i 's/, libcurl4-gnutls-dev//g' $sourcePath/debian/control
-		sed -i 's/ --with-curl//g' $sourcePath/debian/rules
-	fi
 	date=`LANG=en_US.UTF-8 date +"%a, %d %b %Y %T %z"`
 	echo "${3} (${fullversion}) ${distributionVersion}; urgency=low
 
   * See https://github.com/Homegear/${1}/issues?q=is%3Aissue+is%3Aclosed
 
- -- Dr. Sathya Laufer <s.laufer@homegear.email>  $date" > $sourcePath/debian/changelog
+ -- Dr. Sathya Laufer <sathya@laufer.email>  $date" > $sourcePath/debian/changelog
 	tar -zcpf ${3}_$version.orig.tar.gz $sourcePath
 	[ $? -ne 0 ] && exit 1
 	cd $sourcePath
@@ -339,7 +328,7 @@ function createPackageWithoutAutomake {
 
   * See https://github.com/Homegear/${1}/issues?q=is%3Aissue+is%3Aclosed
 
- -- Sathya Laufer <sathya@laufers.net>  $date" > $sourcePath/debian/changelog
+ -- Sathya Laufer <sathya@laufer.email>  $date" > $sourcePath/debian/changelog
 	tar -zcpf ${3}_$version.orig.tar.gz $sourcePath
 	[ $? -ne 0 ] && exit 1
 	cd $sourcePath
@@ -622,20 +611,6 @@ if [[ -n $2 ]]; then
 	rm ${1}.zip
 	mv c1-ssh-${1}* c1-ssh-${1}
 
-	wget --https-only https://gitit.de/api/v4/projects/457/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
-	[ $? -ne 0 ] && exit 1
-	unzip master.zip
-	[ $? -ne 0 ] && exit 1
-	rm master.zip
-	mv libc1-util-master* libc1-util-${1}
-
-	wget --https-only https://gitit.de/api/v4/projects/449/repository/archive.zip?sha=master\&private_token=${2} -O master.zip
-  [ $? -ne 0 ] && exit 1
-  unzip master.zip
-  [ $? -ne 0 ] && exit 1
-  rm master.zip
-  mv libc1-module-master* libc1-module-${1}
-
 #  if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
 #    wget --https-only https://gitit.de/api/v4/projects/138/repository/archive.zip?sha=${1}\&private_token=${2} -O ${1}.zip
 #    [ $? -ne 0 ] && exit 1
@@ -683,22 +658,6 @@ if test -f libhomegear-ipc*.deb; then
 else
 	echo "Error building libhomegear-ipc."
 	exit 1
-fi
-
-createPackage libc1-util $1 libc1-util 0
-if test -f libc1-util*.deb; then
-	dpkg -i libc1-util*.deb
-else
-	echo "Error building libc1-util."
-	exit 1
-fi
-
-createPackage libc1-module $1 libc1-module 0
-if test -f libc1-module*.deb; then
-  dpkg -i libc1-module*.deb
-else
-  echo "Error building libc1-module."
-  exit 1
 fi
 
 createPackageWithoutAutomake python3-homegear $1 python3-homegear 0
@@ -926,7 +885,7 @@ cd /build
 if [ \$(ls /build | grep -c \"\\.changes\$\") -ne 0 ]; then
 	path=\`mktemp -p / -u\`".tar.gz"
 	echo \"<DIST>\" > distribution
-	tar -zcpf \${path} homegear* lib* doorbell* doorctrl* ltp08* c1-ssh* mellon* python3-homegear* binrpc* distribution
+	tar -zcpf \${path} homegear* lib* c1-ssh* mellon* python3-homegear* binrpc* distribution
 	if test -f \${path}; then
 		mv \${path} \${path}.uploading
 		filename=\$(basename \$path)
