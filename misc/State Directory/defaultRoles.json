@@ -566,6 +566,14 @@
     }
   },
   {
+    "id": "20.10.23",
+    "translations": {
+      "de-CH": "Heizung - Fließgeschwindigkeit",
+      "de-DE": "Heizung - Fließgeschwindigkeit",
+      "en-US": "heating system - flow rate"
+    }
+  },
+  {
     "id": "20.11.00",
     "translations": {
       "de-CH": "Druckhaltestation",
@@ -1816,9 +1824,9 @@
       "float"
     ],
     "translations": {
-      "de-CH": "Wetter - Temperatur",
-      "de-DE": "Wetter - Temperatur",
-      "en-US": "weather - temperature"
+      "de-CH": "Außentemperatur",
+      "de-DE": "Außentemperatur",
+      "en-US": "outside temperature"
     },
     "ui": {
       "simpleCreationInfo": {
@@ -2555,6 +2563,60 @@
     "aggregation": "count"
   },
   {
+    "id": "90.02.33",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Erzeugung T1",
+      "de-DE": "Zählerstand Wirkenergie Erzeugung T1",
+      "en-US": "Meter reading active energy (production) T1"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.34",
+    "translations": {
+      "de-CH": "Produktion Wirkenergie Erzeugung T1",
+      "de-DE": "Produktion Wirkenergie Erzeugung T1",
+      "en-US": "Production active energy (production) T1"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.35",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Erzeugung T2",
+      "de-DE": "Zählerstand Wirkenergie Erzeugung T2",
+      "en-US": "Meter reading active energy (production) T2"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.36",
+    "translations": {
+      "de-CH": "Produktion Wirkenergie Erzeugung T2",
+      "de-DE": "Produktion Wirkenergie Erzeugung T2",
+      "en-US": "Production active energy (production) T2"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.02.37",
+    "translations": {
+      "de-CH": "Zählerstand Wirkenergie Erzeugung gesamt",
+      "de-DE": "Zählerstand Wirkenergie Erzeugung gesamt",
+      "en-US": "Meter reading active energy (production) total"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.02.38",
+    "translations": {
+      "de-CH": "Produktion Wirkenergie Erzeugung gesamt",
+      "de-DE": "Produktion Wirkenergie Erzeugung gesamt",
+      "en-US": "Production active energy (production) total"
+    },
+    "aggregation": "count"
+  },
+  {
     "id": "90.02.50",
     "translations": {
       "de-CH": "Wirkleistung total",
@@ -3189,6 +3251,145 @@
     }
   },
   {
+    "id": "90.12.00",
+    "translations": {
+      "de-CH": "Ölzähler",
+      "de-DE": "Ölzähler",
+      "en-US": "Oil meter"
+    }
+  },
+  {
+    "id": "90.12.01",
+    "translations": {
+      "de-CH": "Zählerstand (Volumen)",
+      "de-DE": "Zählerstand (Volumen)",
+      "en-US": "Meter reading (volume)"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.12.02",
+    "translations": {
+      "de-CH": "Verbrauch (Volumen)",
+      "de-DE": "Verbrauch (Volumen)",
+      "en-US": "Consumption (volume)"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.12.03",
+    "translations": {
+      "de-CH": "Zählerstand (Energie)",
+      "de-DE": "Zählerstand (Energie)",
+      "en-US": "Consumption (energy)"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.12.04",
+    "translations": {
+      "de-CH": "Verbrauch (Energie)",
+      "de-DE": "Verbrauch (Energie)",
+      "en-US": "Consumption (energy)"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.13.00",
+    "translations": {
+      "de-CH": "Stromzähler Heizung",
+      "de-DE": "Stromzähler Heizung",
+      "en-US": "Power meter heating"
+    }
+  },
+  {
+    "id": "90.13.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.13.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.14.00",
+    "translations": {
+      "de-CH": "Fernwärmemengenzähler",
+      "de-DE": "Fernwärmemengenzähler",
+      "en-US": "District heat meter"
+    }
+  },
+  {
+    "id": "90.14.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.15.00",
+    "translations": {
+      "de-CH": "Pelletzähler",
+      "de-DE": "Pelletzähler",
+      "en-US": "Pellet meter"
+    }
+  },
+  {
+    "id": "90.15.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.15.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
+    "id": "90.16.00",
+    "translations": {
+      "de-CH": "Universalzähler",
+      "de-DE": "Universalzähler",
+      "en-US": "Generic meter"
+    }
+  },
+  {
+    "id": "90.16.01",
+    "translations": {
+      "de-CH": "Zählerstand",
+      "de-DE": "Zählerstand",
+      "en-US": "Meter reading"
+    },
+    "aggregation": "meter"
+  },
+  {
+    "id": "90.16.02",
+    "translations": {
+      "de-CH": "Verbrauch",
+      "de-DE": "Verbrauch",
+      "en-US": "Consumption"
+    },
+    "aggregation": "count"
+  },
+  {
     "id": "01.00.00",
     "translations": {
       "de-CH": "Sensoren",
@@ -3325,6 +3526,14 @@
     }
   },
   {
+    "id": "02.01.08",
+    "translations": {
+      "de-CH": "Aufwachzählerfehler",
+      "de-DE": "Aufwachzählerfehler",
+      "en-US": "Wake-up counter error"
+    }
+  },
+  {
     "id": "02.02.00",
     "translations": {
       "de-CH": "Kommunikationsmodul",
@@ -3410,6 +3619,69 @@
       "de-CH": "Autoaufzug",
       "de-DE": "Autoaufzug",
       "en-US": "car elevator"
+    }
+  },
+  {
+    "id": "05.00.00",
+    "translations": {
+      "de-CH": "Systemstatus",
+      "de-DE": "Systemstatus",
+      "en-US": "system status"
+    }
+  },
+  {
+    "id": "05.00.01",
+    "types": [
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Zeitoffset",
+      "de-DE": "Zeitoffset",
+      "en-US": "Time offset"
+    }
+  },
+  {
+    "id": "05.00.02",
+    "types": [
+      "int"
+    ],
+    "translations": {
+      "de-CH": "RSSI",
+      "de-DE": "RSSI",
+      "en-US": "Time offset"
+    }
+  },
+  {
+    "id": "05.00.03",
+    "types": [
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Telegrammverluste",
+      "de-DE": "Telegrammverluste",
+      "en-US": "Missed telegrams"
+    }
+  },
+  {
+    "id": "05.00.04",
+    "types": [
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Telegrammwiederholungen",
+      "de-DE": "Telegrammwiederholungen",
+      "en-US": "Resent telegrams"
+    }
+  },
+  {
+    "id": "05.00.05",
+    "types": [
+      "int"
+    ],
+    "translations": {
+      "de-CH": "Systeminfo",
+      "de-DE": "Systeminfo",
+      "en-US": "System info"
     }
   },
   {
