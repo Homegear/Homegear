@@ -47,12 +47,20 @@ class Device
                     900500 => 0xF01E,
                     900600 => 0xF01A,
                     900700 => 0xF01A,
-                    900800 => 0xF01A
+                    900800 => 0xF01A,
+                    910100 => 0xF01A,
+                    910200 => 0xF01B,
+                    910300 => 0xF01C,
+                    910400 => 0xF01D,
+                    910500 => 0xF01E,
+                    910600 => 0xF01A,
+                    910700 => 0xF01A,
+                    910800 => 0xF01A
                 ];
                 if (!isset($roleTypeIdMap[$role])) throw new DeviceException('Unknown role.');
                 $peerId = \Homegear\Homegear::createDevice($familyId, $roleTypeIdMap[$role], $device['id'], -1, -1, '');
             }
-            if ($role == 900101 || $role == 900601 || $role == 900701 || $role == 900801) {
+            if ($role == 900101 || $role == 900601 || $role == 900701 || $role == 900801 || $role == 910101 || $role == 910601 || $role == 910701 || $role == 910801) {
                 \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900100);
                 \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900101);
                 \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900600);
@@ -61,6 +69,14 @@ class Device
                 \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900701);
                 \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900800);
                 \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 900801);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 910100);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 910101);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 910600);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 910601);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 910700);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 910701);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 910800);
+                \Homegear\Homegear::removeRoleFromVariable($peerId, 1, "VOLUME", 910801);
                 \Homegear\Homegear::addRoleToVariable($peerId, 1, "VOLUME", $role);
             }
             //All other meter roles are defined by their XML file
@@ -167,8 +183,20 @@ class Device
         $telemetryCategoryId = Util::GetOrCreateTelemetryCategory();
         if (isset($device['roles'])) {
             foreach ($device['roles'] as $key => $roleSettings) {
-                $role = intval($key);
+                $role = 0;
+                $submeteringRole = 0;
+                if (substr($key, 0, 2) === '91') {
+                    $submeteringRole = intval($key);
+                    $key[1] = '0';
+                    $role = intval($key);
+                } else {
+                    $role = intval($key);
+                }
+                
                 $roleChannels = \Homegear\Homegear::getVariablesInRole($role, $peerId);
+                if (count($roleChannels) == 0 && $submeteringRole > 0) {
+                    $roleChannels = \Homegear\Homegear::getVariablesInRole($submeteringRole, $peerId);
+                }
                 if (count($roleChannels) == 0) {
                 	if ($roleSettings['alternativeRoles'] && is_array($roleSettings['alternativeRoles'])) {
 						foreach ($roleSettings['alternativeRoles'] as $alternativeRole) {
@@ -185,6 +213,12 @@ class Device
                 }
                 foreach ($roleChannels as $channel => $roleVariables) {
                     foreach ($roleVariables as $variable => $variableSettings) {
+                        //Set submetering role
+                        if ($submeteringRole > 0) {
+                            \Homegear\Homegear::removeRoleFromVariable($peerId, $channel, $variable, $role);
+                            \Homegear\Homegear::addRoleToVariable($peerId, $channel, $variable, $submeteringRole);
+                        }
+
                         //Add role to telemetry
                         \Homegear\Homegear::addCategoryToVariable($peerId, $channel, $variable, $telemetryCategoryId);
 
