@@ -185,9 +185,9 @@ class Device
             foreach ($device['roles'] as $key => $roleSettings) {
                 $role = 0;
                 $submeteringRole = 0;
-                if (substr($key, 0, 2) === '91') {
+                if (substr((string)$key, 0, 2) === '91') {
                     $submeteringRole = intval($key);
-                    $key[1] = '0';
+                    $key = substr_replace((string)$key, '0', 1, 1);
                     $role = intval($key);
                 } else {
                     $role = intval($key);
@@ -215,7 +215,12 @@ class Device
                     foreach ($roleVariables as $variable => $variableSettings) {
                         //Set submetering role
                         if ($submeteringRole > 0) {
+                            $submeteringStr = (string)$submeteringRole;
+                            $baseRole100 = intval('90' . substr($submeteringStr, 2, 2) . '00');
+                            $baseRole000 = intval('900000');
                             \Homegear\Homegear::removeRoleFromVariable($peerId, $channel, $variable, $role);
+                            \Homegear\Homegear::removeRoleFromVariable($peerId, $channel, $variable, $baseRole100);
+                            \Homegear\Homegear::removeRoleFromVariable($peerId, $channel, $variable, $baseRole000);
                             \Homegear\Homegear::addRoleToVariable($peerId, $channel, $variable, $submeteringRole);
                         }
 
