@@ -1030,7 +1030,7 @@ BaseLib::PVariable RpcServer::callMethod(const BaseLib::PRpcClientInfo &clientIn
     }
 
     if (GD::bl->debugLevel >= 4) {
-      if (methodName != "getMetadata") {
+      if (methodName != "getMetadata" && methodName != "getSystemVariable" && methodName != "setSystemVariable") {
         _out.printInfo("Info: RPC Method called: " + methodName + " Parameters:");
         for (auto i = parameters->arrayValue->begin();
              i != parameters->arrayValue->end(); ++i) {
