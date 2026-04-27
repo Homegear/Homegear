@@ -153,6 +153,8 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs update-ca-certificates --fresh
 
 if [ "$distver" == "stretch" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libpython3.5-stdlib
+elif [ "$distver" == "resolute" ]; then
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3-setuptools
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3-distutils
 fi
