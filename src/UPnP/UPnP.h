@@ -31,6 +31,8 @@
 #ifndef UPNP_H_
 #define UPNP_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace Homegear {

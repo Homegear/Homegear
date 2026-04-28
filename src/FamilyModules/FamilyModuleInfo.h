@@ -31,6 +31,8 @@
 #ifndef FAMILY_MODULE_INFO_H_
 #define FAMILY_MODULE_INFO_H_
 
+#include <cstdint>
+
 #include <string>
 
 struct FamilyModuleInfo {

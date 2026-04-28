@@ -31,6 +31,8 @@
 #ifndef PHPEVENTS_H_
 #define PHPEVENTS_H_
 
+#include <cstdint>
+
 #ifndef NO_SCRIPTENGINE
 
 #include <homegear-base/BaseLib.h>

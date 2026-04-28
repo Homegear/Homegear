@@ -31,6 +31,8 @@
 #ifndef UICONTROLLER_H_
 #define UICONTROLLER_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 #include <homegear-base/DeviceDescription/UI/UiElements.h>
 

@@ -31,6 +31,8 @@
 #ifndef NODEBLUECLIENT_H_
 #define NODEBLUECLIENT_H_
 
+#include <cstdint>
+
 #include "NodeBlueResponseClient.h"
 #include "FlowInfoClient.h"
 #include "NodeManager.h"

@@ -125,19 +125,19 @@ EOF
 #Fix debootstrap base package errors
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 
-if [ "$distver" == "trixie" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "noble" ] || [ "$distver" == "jammy" ]; then
+if [ "$distver" == "trixie" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "noble" ] || [ "$distver" == "resolute" ] || [ "$distver" == "jammy" ]; then
 	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
 		export MAN_DISABLE_SECCOMP=1
 	fi
 fi
 
-if [ "$distver" == "noble" ] ||[ "$distver" == "jammy" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "resolute" ] ||[ "$distver" == "jammy" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 fi
 
 chroot $rootfs apt-get update
-if [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
+if [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ] || [ "$distver" == "resolute" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
 fi
@@ -148,11 +148,11 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs update-ca-certificates --fresh
 
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libmysqlclient-dev
 
-if [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
+if [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ] || [ "$distver" == "resolute" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 fi
 
-if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "resolute" ] || [ "$distver" == "jammy" ]; then
 	#When using the default "fakeroot-sysv" PHP package creation fails
 	chroot $rootfs update-alternatives --install /usr/bin/fakeroot fakeroot /usr/bin/fakeroot-tcp 100
 fi
@@ -191,7 +191,7 @@ v38=
 EOF
 chmod 644 "$rootfs/etc/apt/keyrings/ondrej-ubuntu-php.asc"
 
-if [ "$distver" == "noble" ] || [ "$distver" == "trixie" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "resolute" ] || [ "$distver" == "trixie" ]; then
   echo "deb-src [signed-by=/etc/apt/keyrings/ondrej-ubuntu-php.asc] http://ppa.launchpad.net/ondrej/php/ubuntu noble main" > "$rootfs/etc/apt/sources.list.d/php8-src.list"
 elif [ "$distver" == "jammy" ] || [ "$distver" == "bookworm" ]; then
   echo "deb-src [signed-by=/etc/apt/keyrings/ondrej-ubuntu-php.asc] http://ppa.launchpad.net/ondrej/php/ubuntu jammy main" > "$rootfs/etc/apt/sources.list.d/php8-src.list"

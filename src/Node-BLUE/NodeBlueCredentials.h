@@ -31,6 +31,8 @@
 #ifndef HOMEGEAR_SRC_NODE_BLUE_NODEBLUECREDENTIALS_H_
 #define HOMEGEAR_SRC_NODE_BLUE_NODEBLUECREDENTIALS_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace Homegear {

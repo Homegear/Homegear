@@ -31,6 +31,8 @@
 #ifndef IPCRESPONSE_H_
 #define IPCRESPONSE_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace Homegear {

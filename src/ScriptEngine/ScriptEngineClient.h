@@ -31,6 +31,8 @@
 #ifndef SCRIPTENGINECLIENT_H_
 #define SCRIPTENGINECLIENT_H_
 
+#include <cstdint>
+
 #ifndef NO_SCRIPTENGINE
 
 #include "php_config_fixes.h"

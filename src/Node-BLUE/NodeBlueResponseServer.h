@@ -31,6 +31,8 @@
 #ifndef NODEBLUERESPONSESERVER_H_
 #define NODEBLUERESPONSESERVER_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace Homegear {

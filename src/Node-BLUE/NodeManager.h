@@ -31,6 +31,8 @@
 #ifndef NODEMANAGER_H_
 #define NODEMANAGER_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 #include <homegear-node/INode.h>
 #include <homegear-node/NodeFactory.h>

@@ -31,6 +31,8 @@
 #ifndef NODEBLUERESPONSECLIENT_H_
 #define NODEBLUERESPONSECLIENT_H_
 
+#include <cstdint>
+
 #include <homegear-node/Variable.h>
 
 #include <atomic>
