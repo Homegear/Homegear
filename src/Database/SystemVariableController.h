@@ -31,6 +31,8 @@
 #ifndef HOMEGEAR_SYSTEMVARIABLECONTROLLER_H
 #define HOMEGEAR_SYSTEMVARIABLECONTROLLER_H
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace Homegear {

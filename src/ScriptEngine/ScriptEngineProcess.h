@@ -31,6 +31,8 @@
 #ifndef SCRIPTENGINEPROCESS_H_
 #define SCRIPTENGINEPROCESS_H_
 
+#include <cstdint>
+
 #ifndef NO_SCRIPTENGINE
 
 #include "ScriptEngineClientData.h"

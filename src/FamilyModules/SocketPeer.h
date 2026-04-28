@@ -30,6 +30,8 @@
 #ifndef SOCKET_PEER_H_
 #define SOCKET_PEER_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace Homegear {

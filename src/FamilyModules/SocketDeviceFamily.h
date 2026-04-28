@@ -30,6 +30,8 @@
 #ifndef SOCKET_DEVICE_FAMILY_H_
 #define SOCKET_DEVICE_FAMILY_H_
 
+#include <cstdint>
+
 #include "SocketCentral.h"
 
 #include <homegear-base/BaseLib.h>

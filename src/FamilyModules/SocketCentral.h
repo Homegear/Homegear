@@ -30,6 +30,8 @@
 #ifndef SOCKET_CENTRAL_H_
 #define SOCKET_CENTRAL_H_
 
+#include <cstdint>
+
 #include "SocketPeer.h"
 
 #include <homegear-base/BaseLib.h>

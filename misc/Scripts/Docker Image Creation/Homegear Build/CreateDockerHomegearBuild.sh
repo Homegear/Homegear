@@ -135,20 +135,20 @@ if [ "$distver" == "stretch" ]; then
 	[ $? -ne 0 ] && exit 1
 fi
 
-if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "resolute" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ]; then
 	if [ "$arch" == "arm64" ]; then # Workaround for "syscall 277 error" in man-db
 		export MAN_DISABLE_SECCOMP=1
 	fi
 fi
 
-if [ "$distver" == "noble" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "resolute" ] || [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bionic" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ]; then
 	chroot $rootfs apt-get update
 	chroot $rootfs apt-get -y install gnupg
 	[ $? -ne 0 ] && exit 1
 fi
 
 chroot $rootfs apt-get update
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "vivid" ] || [ "$distver" == "wily" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ] || [ "$distver" == "resolute" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3
 	[ $? -ne 0 ] && exit 1
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y -f install
@@ -169,7 +169,7 @@ echo "deb [signed-by=/etc/apt/keyrings/homegear.asc] https://apt.homegear.eu/${r
 
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get update
 # python: Needed by homegear-ui's npm on some systems
-DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip binutils debhelper devscripts automake autoconf libtool cmake sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php8-homegear-dev nodejs-homegear libxslt1-dev libedit-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full libavahi-common-dev libavahi-client-dev libicu-dev libonig-dev libsodium-dev libpython3-dev python3-all python3-setuptools dh-python uuid-dev libgpgme-dev check
+DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip binutils debhelper devscripts automake autoconf libtool cmake sqlite3 libsqlite3-dev libncurses5-dev libssl-dev libparse-debcontrol-perl libgpg-error-dev php8-homegear-dev nodejs-homegear libxslt1-dev libedit-dev libqdbm-dev libcrypto++-dev libltdl-dev zlib1g-dev libtinfo-dev libgmp-dev libxml2-dev libzip-dev p7zip-full libavahi-common-dev libavahi-client-dev libicu-dev libonig-dev libsodium-dev libpython3-dev python3-all python3-setuptools dh-python uuid-dev libgpgme-dev check git
 [ $? -ne 0 ] && exit 1
 
 # {{{ Packages for doorctrl
@@ -179,7 +179,7 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install ssh wget unzip 
 #fi
 # }}}
 
-if [ "$distver" == "trixie" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
+if [ "$distver" == "trixie" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ] || [ "$distver" == "resolute" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libenchant-2-dev
 	[ $? -ne 0 ] && exit 1
 else
@@ -197,7 +197,7 @@ fi
 
 # {{{ GCC, GCrypt, GNUTLS, Curl
 DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgcrypt20-dev libgnutls28-dev
-if [ "$distver" == "noble" ] || [ "$distver" == "trixie" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "resolute" ] || [ "$distver" == "trixie" ]; then
   DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgnutls30t64 libnsl-dev
   [ $? -ne 0 ] && exit 1
 elif [ "$distver" == "bookworm" ]; then
@@ -207,14 +207,14 @@ else
   DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libgnutlsxx28
   [ $? -ne 0 ] && exit 1
 fi
-if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ]; then
+if [ "$distver" == "stretch" ] || [ "$distver" == "buster" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ] || [ "$distver" == "trixie" ] || [ "$distver" == "bionic" ] || [ "$distver" == "focal" ] || [ "$distver" == "jammy" ] || [ "$distver" == "noble" ] || [ "$distver" == "resolute" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libcurl4-gnutls-dev
 	[ $? -ne 0 ] && exit 1
 fi
 # }}}
 
 # {{{ Readline
-if [ "$distver" == "noble" ] || [ "$distver" == "trixie" ]; then
+if [ "$distver" == "noble" ] || [ "$distver" == "resolute" ] || [ "$distver" == "trixie" ]; then
   DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libreadline8t64 libreadline-dev
   [ $? -ne 0 ] && exit 1
 elif [ "$distver" == "jammy" ] || [ "$distver" == "focal" ] || [ "$distver" == "bullseye" ] || [ "$distver" == "bookworm" ]; then

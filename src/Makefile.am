@@ -32,7 +32,7 @@ homegear_LDADD = -lpthread -lreadline -lgcrypt -lgnutls -lhomegear-base -lhomege
 if WITH_NODEJS
 homegear_node_SOURCES = Nodejs/main.cpp Nodejs/Nodejs.cpp
 homegear_node_LDADD = -lpthread -lnodejs-homegear
-homegear_node_CPPFLAGS = -Wall -std=c++17 -D_FORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -I/usr/include/nodejs-homegear
+homegear_node_CPPFLAGS = -Wall -std=c++20 -D_FORTIFY_SOURCE=2 -DGCRYPT_NO_DEPRECATED -I/usr/include/nodejs-homegear
 endif
 
 if BSDSYSTEM

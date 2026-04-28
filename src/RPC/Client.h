@@ -31,6 +31,8 @@
 #ifndef CLIENT_H_
 #define CLIENT_H_
 
+#include <cstdint>
+
 #include <map>
 #include <thread>
 #include <vector>

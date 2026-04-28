@@ -31,6 +31,8 @@
 #ifndef HOMEGEAR_VARIABLEPROFILEMANAGER_H
 #define HOMEGEAR_VARIABLEPROFILEMANAGER_H
 
+#include <cstdint>
+
 #include <homegear-base/Variable.h>
 #include <homegear-base/Encoding/RpcDecoder.h>
 #include <homegear-base/Sockets/RpcClientInfo.h>

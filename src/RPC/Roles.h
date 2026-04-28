@@ -31,6 +31,8 @@
 #ifndef HOMEGEAR_ROLES_H
 #define HOMEGEAR_ROLES_H
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace Homegear {

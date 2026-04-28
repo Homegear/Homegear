@@ -31,6 +31,8 @@
 #ifndef SHARED_OBJECT_FAMILY_MODULES_H
 #define SHARED_OBJECT_FAMILY_MODULES_H
 
+#include <cstdint>
+
 #include "FamilyModuleInfo.h"
 
 #include <homegear-base/BaseLib.h>

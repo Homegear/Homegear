@@ -31,6 +31,8 @@
 #ifndef HOMEGEAR_PHP_GLOBALS_H_
 #define HOMEGEAR_PHP_GLOBALS_H_
 
+#include <cstdint>
+
 #ifndef NO_SCRIPTENGINE
 
 #include <homegear-base/BaseLib.h>

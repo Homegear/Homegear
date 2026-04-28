@@ -31,6 +31,8 @@
 #ifndef HOMEGEAR_IPCLOGGER_H
 #define HOMEGEAR_IPCLOGGER_H
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace Homegear {

@@ -31,6 +31,8 @@
 #ifndef HOMEGEAR_CACHEINFO_H
 #define HOMEGEAR_CACHEINFO_H
 
+#include <cstdint>
+
 #include <string>
 
 namespace Homegear {

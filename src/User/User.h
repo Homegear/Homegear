@@ -31,6 +31,8 @@
 #ifndef USER_H_
 #define USER_H_
 
+#include <cstdint>
+
 #include <iostream>
 #include <random>
 #include <string>

@@ -31,6 +31,8 @@
 #ifndef LICENSINGCONTROLLER_H_
 #define LICENSINGCONTROLLER_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 #include <string>

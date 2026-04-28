@@ -31,6 +31,8 @@
 #ifndef SCRIPTENGINERESPONSE_H_
 #define SCRIPTENGINERESPONSE_H_
 
+#include <cstdint>
+
 #ifndef NO_SCRIPTENGINE
 
 #include <homegear-base/BaseLib.h>

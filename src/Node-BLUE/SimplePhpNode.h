@@ -31,6 +31,8 @@
 #ifndef SIMPLEPHPNODE_H_
 #define SIMPLEPHPNODE_H_
 
+#include <cstdint>
+
 #ifndef NO_SCRIPTENGINE
 
 #include <homegear-node/INode.h>

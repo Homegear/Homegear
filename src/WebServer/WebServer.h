@@ -31,6 +31,8 @@
 #ifndef WEBSERVER_H_
 #define WEBSERVER_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace Homegear {

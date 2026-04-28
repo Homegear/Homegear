@@ -31,6 +31,8 @@
 #ifndef REMOTERPCSERVER_H_
 #define REMOTERPCSERVER_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 #include "Auth.h"
 #include "ClientSettings.h"
