@@ -31,6 +31,8 @@
 #ifndef RESTSERVER_H_
 #define RESTSERVER_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace Homegear {

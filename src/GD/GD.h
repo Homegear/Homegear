@@ -31,6 +31,8 @@
 #ifndef GD_H_
 #define GD_H_
 
+#include <cstdint>
+
 #include "../ScriptEngine/ScriptEngineServer.h"
 #include "../Node-BLUE/NodeBlueServer.h"
 #include "../IPC/IpcServer.h"

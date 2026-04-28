@@ -31,6 +31,8 @@
 #ifndef CLICLIENT_H_
 #define CLICLIENT_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 #include <homegear-ipc/IIpcClient.h>
 

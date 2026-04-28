@@ -31,6 +31,8 @@
 #ifndef FLOWINFOSERVER_H_
 #define FLOWINFOSERVER_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace Homegear {

@@ -31,6 +31,8 @@
 #ifndef HOMEGEAR_SRC_NODE_BLUE_NODE_RED_NODEPINKWEBSOCKET_H_
 #define HOMEGEAR_SRC_NODE_BLUE_NODE_RED_NODEPINKWEBSOCKET_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 namespace Homegear::NodeBlue {

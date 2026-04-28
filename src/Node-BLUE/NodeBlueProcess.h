@@ -31,6 +31,8 @@
 #ifndef NODEBLUEPROCESS_H_
 #define NODEBLUEPROCESS_H_
 
+#include <cstdint>
+
 #include "NodeBlueClientData.h"
 #include <homegear-base/BaseLib.h>
 #include "FlowInfoServer.h"

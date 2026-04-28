@@ -31,6 +31,8 @@
 #ifndef CLIENTSETTINGS_H_
 #define CLIENTSETTINGS_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 #include <memory>

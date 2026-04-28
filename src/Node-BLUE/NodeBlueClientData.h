@@ -31,6 +31,8 @@
 #ifndef NODEBLUECLIENTDATA_H_
 #define NODEBLUECLIENTDATA_H_
 
+#include <cstdint>
+
 #include "NodeBlueResponseServer.h"
 #include <homegear-base/BaseLib.h>
 

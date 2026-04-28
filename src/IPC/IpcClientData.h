@@ -31,6 +31,8 @@
 #ifndef IPCCLIENTDATA_H_
 #define IPCCLIENTDATA_H_
 
+#include <cstdint>
+
 #include "IpcResponse.h"
 
 #include <homegear-base/BaseLib.h>

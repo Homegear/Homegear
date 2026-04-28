@@ -31,6 +31,8 @@
 #ifndef IPCSERVER_H_
 #define IPCSERVER_H_
 
+#include <cstdint>
+
 #include "IpcClientData.h"
 
 #include <homegear-base/BaseLib.h>

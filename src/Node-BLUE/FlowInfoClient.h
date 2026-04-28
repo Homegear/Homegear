@@ -31,6 +31,8 @@
 #ifndef FLOWINFOCLIENT_H_
 #define FLOWINFOCLIENT_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 #include <homegear-node/NodeInfo.h>
 

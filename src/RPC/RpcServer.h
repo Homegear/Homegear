@@ -31,6 +31,8 @@
 #ifndef RPCSERVER_H_
 #define RPCSERVER_H_
 
+#include <cstdint>
+
 #include "RpcMethods/RPCMethods.h"
 #include "Auth.h"
 #include "RestServer.h"

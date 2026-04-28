@@ -31,6 +31,8 @@
 #ifndef SQLITE3_H_
 #define SQLITE3_H_
 
+#include <cstdint>
+
 #include "homegear-base/Database/DatabaseTypes.h"
 
 #include <mutex>

@@ -31,6 +31,8 @@
 #ifndef CLISERVER_H_
 #define CLISERVER_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 #include "../User/User.h"
 

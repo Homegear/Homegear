@@ -31,6 +31,8 @@
 #ifndef MQTTSETTINGS_H_
 #define MQTTSETTINGS_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 
 #include <memory>

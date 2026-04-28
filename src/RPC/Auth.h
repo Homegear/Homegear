@@ -31,6 +31,8 @@
 #ifndef AUTH_H_
 #define AUTH_H_
 
+#include <cstdint>
+
 #include <homegear-base/BaseLib.h>
 #include "../User/User.h"
 

@@ -31,6 +31,8 @@
 #ifndef SCRIPTENGINECLIENTDATA_H_
 #define SCRIPTENGINECLIENTDATA_H_
 
+#include <cstdint>
+
 #ifndef NO_SCRIPTENGINE
 
 #include "ScriptEngineResponse.h"
