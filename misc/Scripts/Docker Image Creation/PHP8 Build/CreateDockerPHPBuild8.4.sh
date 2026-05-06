@@ -270,21 +270,27 @@ rm -Rf /PHPBuild/lib*
 
 cd /PHPBuild
 apt-get update
-# Workaround: on armhf, dpkg-source's chmod -R fails with EOVERFLOW
-# ("Value too large for defined data type") because the upstream orig tarball
-# contains entries with timestamps that overflow stat() on 32-bit. Download
-# only, repack the orig tarball with normalised mtimes, then unpack manually.
+# Workaround: on armhf via QEMU/overlayfs, dpkg-source's "chmod -R
+# u+r+w+X,g+r-w+X,o+r-w+X" of the freshly unpacked orig tarball fails with
+# EOVERFLOW ("Value too large for defined data type"). The X-mode flag
+# forces chmod to lstat() every file so it can decide whether to set the
+# execute bit, and QEMU's 32-bit stat translation overflows on overlayfs
+# inodes that exceed 2^32. Wrap chmod for the duration of dpkg-source -x
+# only: the upstream tarball's permissions (644/755) are already correct,
+# so the normalisation is effectively idempotent and skipping the failing
+# entries is safe. Later build steps (configure/make/debuild) do not use
+# "chmod -R ...+X" and are unaffected.
 apt-get source --download-only php8.4
-orig_tarball=$(ls php8*.orig.tar.xz)
 dsc_file=$(ls php8*.dsc)
-mkdir orig_extract
-cd orig_extract
-tar -xmf "../${orig_tarball}"
-tar --xz -cf "../${orig_tarball}.fixed" --mtime='2024-01-01' --sort=name *
-cd ..
-mv "${orig_tarball}.fixed" "${orig_tarball}"
-rm -Rf orig_extract
-dpkg-source --no-check -x "${dsc_file}"
+mkdir -p /tmp/chmod-shim
+cat > /tmp/chmod-shim/chmod <<'WRAPEOF'
+#!/bin/bash
+/bin/chmod "$@" 2>/dev/null
+exit 0
+WRAPEOF
+/bin/chmod +x /tmp/chmod-shim/chmod
+PATH="/tmp/chmod-shim:$PATH" dpkg-source --no-check -x "${dsc_file}"
+rm -rf /tmp/chmod-shim
 rm php8*.tar.*
 rm php8*.dsc
 cd php8*
