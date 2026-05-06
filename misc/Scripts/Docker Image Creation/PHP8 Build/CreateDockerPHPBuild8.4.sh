@@ -331,7 +331,11 @@ cd ..
 mv php8* php8-homegear-dev-${version}
 tar -zcpf php8-homegear-dev_${version}.orig.tar.gz php8-homegear-dev-${version}
 cd php8-homegear-dev-*
-debuild --no-lintian -us -uc
+# debuild sanitises the environment and overrides PATH with a fixed default
+# (/usr/sbin:/usr/bin:/sbin:/bin), which would otherwise drop the chmod shim
+# in /tmp/chmod-shim. --prepend-path puts it back at the front of the PATH
+# debuild hands to dpkg-buildpackage / dpkg-source -b.
+debuild --prepend-path=/tmp/chmod-shim --no-lintian -us -uc
 cd /
 rm -Rf /PHPBuild/php8-homegear-dev-${version}
 if test -f /PHPBuild/Upload.sh; then
