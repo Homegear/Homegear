@@ -155,10 +155,13 @@ if [ "$distver" == "stretch" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libpython3.5-stdlib
 elif [ "$distver" == "resolute" ]; then
 	# Resolute ships python3 = 3.14, but Node.js 22.x's configure rejects
-	# anything outside 3.8 – 3.13. Install python3.13 alongside; Node's
-	# configure searches PATH for python3.13 / python3.12 / ... before
-	# falling back to python3, so the auto-discovery picks the right one.
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3-setuptools python3.13
+	# anything outside 3.8 – 3.13. Install python3.13 alongside so it is
+	# available for the build to use. Fail loudly if the package is not
+	# in the repos (otherwise we silently end up with a broken image).
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3-setuptools python3.13 || {
+		echo "ERROR: python3.13 is required for Node.js 22.x on resolute but apt-get could not install it." >&2
+		exit 1
+	}
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3-distutils
 fi
@@ -217,6 +220,13 @@ WRAPEOF
 # python3.13/12/... by name. Drop a python3 symlink pointing at 3.13 into
 # the same shim directory so it shadows /usr/bin/python3 once the shim
 # directory is prepended to PATH (here and via debuild --prepend-path).
+# Defensive: install python3.13 at runtime in case the build runs against
+# an older image that was built before python3.13 was added to the
+# image-creation script.
+if ! command -v python3.13 >/dev/null 2>&1; then
+	apt-get update
+	DEBIAN_FRONTEND=noninteractive apt-get -y install python3.13 || true
+fi
 if command -v python3.13 >/dev/null 2>&1; then
 	ln -sf "$(command -v python3.13)" /tmp/chmod-shim/python3
 fi
