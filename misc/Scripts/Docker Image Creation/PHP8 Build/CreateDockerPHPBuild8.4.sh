@@ -265,23 +265,18 @@ fi
 
 distribution="<DISTVER>"
 
-rm -Rf /PHPBuild/php*
-rm -Rf /PHPBuild/lib*
-
-cd /PHPBuild
-apt-get update
 # Workaround: on armhf via QEMU/overlayfs, dpkg-source's "chmod -R
-# u+r+w+X,g+r-w+X,o+r-w+X" of the freshly unpacked orig tarball fails with
+# u+r+w+X,g+r-w+X,o+r-w+X" on its tmp-extract directory fails with
 # EOVERFLOW ("Value too large for defined data type"). The X-mode flag
-# forces chmod to lstat() every file so it can decide whether to set the
-# execute bit, and QEMU's 32-bit stat translation overflows on overlayfs
-# inodes that exceed 2^32. Wrap chmod for the duration of dpkg-source -x
-# only: the upstream tarball's permissions (644/755) are already correct,
-# so the normalisation is effectively idempotent and skipping the failing
-# entries is safe. Later build steps (configure/make/debuild) do not use
-# "chmod -R ...+X" and are unaffected.
-apt-get source --download-only php8.4
-dsc_file=$(ls php8*.dsc)
+# forces chmod to lstat() every file to decide whether to set the execute
+# bit, and QEMU's 32-bit stat translation overflows on overlayfs inodes
+# > 2^32. The same call happens twice during a build:
+#   1. dpkg-source -x  (extracting the upstream Sury source)
+#   2. dpkg-source -b  (called by debuild to repackage the source)
+# Install a chmod shim once, export PATH so subprocesses inherit it, and
+# leave it in place for the whole script. The Sury tarball's permissions
+# (644/755) are already correct, so the chmod normalisation is effectively
+# idempotent and swallowing the EOVERFLOW is safe.
 mkdir -p /tmp/chmod-shim
 cat > /tmp/chmod-shim/chmod <<'WRAPEOF'
 #!/bin/bash
@@ -289,8 +284,16 @@ cat > /tmp/chmod-shim/chmod <<'WRAPEOF'
 exit 0
 WRAPEOF
 /bin/chmod +x /tmp/chmod-shim/chmod
-PATH="/tmp/chmod-shim:$PATH" dpkg-source --no-check -x "${dsc_file}"
-rm -rf /tmp/chmod-shim
+export PATH="/tmp/chmod-shim:$PATH"
+
+rm -Rf /PHPBuild/php*
+rm -Rf /PHPBuild/lib*
+
+cd /PHPBuild
+apt-get update
+apt-get source --download-only php8.4
+dsc_file=$(ls php8*.dsc)
+dpkg-source --no-check -x "${dsc_file}"
 rm php8*.tar.*
 rm php8*.dsc
 cd php8*
