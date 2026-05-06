@@ -211,6 +211,15 @@ cat > /tmp/chmod-shim/chmod <<'WRAPEOF'
 exit 0
 WRAPEOF
 /bin/chmod +x /tmp/chmod-shim/chmod
+
+# Node.js 22.x's configure rejects python3 >= 3.14 (Resolute default), and
+# its configure script just invokes "python3" rather than searching for
+# python3.13/12/... by name. Drop a python3 symlink pointing at 3.13 into
+# the same shim directory so it shadows /usr/bin/python3 once the shim
+# directory is prepended to PATH (here and via debuild --prepend-path).
+if command -v python3.13 >/dev/null 2>&1; then
+	ln -sf "$(command -v python3.13)" /tmp/chmod-shim/python3
+fi
 export PATH="/tmp/chmod-shim:$PATH"
 
 cd /build
