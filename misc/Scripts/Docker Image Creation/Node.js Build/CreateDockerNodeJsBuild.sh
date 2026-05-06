@@ -191,6 +191,24 @@ distribution="<DISTVER>"
 version=${1}
 revision=${2}
 
+# Workaround: on armhf via QEMU/overlayfs, dpkg-source's "chmod -R
+# u+r+w+X,g+r-w+X,o+r-w+X" of its tmp-extract directory fails with
+# EOVERFLOW ("Value too large for defined data type"). chmod's +X flag
+# forces lstat() on every entry, and QEMU's 32-bit stat translation
+# overflows on overlayfs inodes > 2^32. dpkg-source -b is invoked by
+# debuild below. Install a chmod shim and pass it through debuild's
+# sanitised PATH via --prepend-path. The Node.js sources we tar up
+# already carry sane permissions (644/755), so the chmod normalisation
+# is effectively idempotent and swallowing the EOVERFLOW is safe.
+mkdir -p /tmp/chmod-shim
+cat > /tmp/chmod-shim/chmod <<'WRAPEOF'
+#!/bin/bash
+/bin/chmod "$@" 2>/dev/null
+exit 0
+WRAPEOF
+/bin/chmod +x /tmp/chmod-shim/chmod
+export PATH="/tmp/chmod-shim:$PATH"
+
 cd /build
 wget https://github.com/nodejs/node/archive/v${version}.tar.gz || exit 1
 tar -zxf v${version}.tar.gz || exit 1
@@ -208,7 +226,10 @@ cd ..
 mv node* nodejs-homegear-${version}
 tar -zcpf nodejs-homegear_${version}.orig.tar.gz nodejs-homegear-${version}
 cd nodejs-homegear-*
-debuild --no-lintian -us -uc
+# --prepend-path injects the chmod shim into debuild's sanitised PATH so
+# the dpkg-source -b it spawns picks up the wrapper instead of the real
+# chmod that hits EOVERFLOW on armhf/QEMU.
+debuild --prepend-path=/tmp/chmod-shim --no-lintian -us -uc
 cd /
 rm -Rf /build/nodejs-homegear-${version}
 if test -f /build/Upload.sh; then
