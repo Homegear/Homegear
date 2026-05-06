@@ -200,9 +200,13 @@ fi
 chroot $rootfs apt-get update
 
 mkdir $rootfs/PHPBuild
-chroot $rootfs bash -c "cd /PHPBuild && apt-get source php8.4"
+# Use --download-only to avoid dpkg-source's chmod -R failing on armhf with
+# "Value too large for defined data type" (EOVERFLOW). For mk-build-deps we
+# only need debian/control, which is shipped inside the .debian.tar.xz, so
+# the orig tarball never has to be unpacked here.
+chroot $rootfs bash -c "cd /PHPBuild && apt-get source --download-only php8.4"
 cd $rootfs/PHPBuild
-tar -xf php8*debian.tar.xz
+tar -xmf php8*debian.tar.xz
 cd ..
 sed -i '/.*libcurl4-openssl-dev | libcurl-dev,.*/d' $rootfs/PHPBuild/debian/control
 sed -i 's/libtidy-dev.*,/libtidy-dev,/g' $rootfs/PHPBuild/debian/control
@@ -266,7 +270,21 @@ rm -Rf /PHPBuild/lib*
 
 cd /PHPBuild
 apt-get update
-apt-get source php8.4
+# Workaround: on armhf, dpkg-source's chmod -R fails with EOVERFLOW
+# ("Value too large for defined data type") because the upstream orig tarball
+# contains entries with timestamps that overflow stat() on 32-bit. Download
+# only, repack the orig tarball with normalised mtimes, then unpack manually.
+apt-get source --download-only php8.4
+orig_tarball=$(ls php8*.orig.tar.xz)
+dsc_file=$(ls php8*.dsc)
+mkdir orig_extract
+cd orig_extract
+tar -xmf "../${orig_tarball}"
+tar --xz -cf "../${orig_tarball}.fixed" --mtime='2024-01-01' --sort=name *
+cd ..
+mv "${orig_tarball}.fixed" "${orig_tarball}"
+rm -Rf orig_extract
+dpkg-source --no-check -x "${dsc_file}"
 rm php8*.tar.*
 rm php8*.dsc
 cd php8*
