@@ -154,7 +154,11 @@ DEBIAN_FRONTEND=noninteractive chroot $rootfs update-ca-certificates --fresh
 if [ "$distver" == "stretch" ]; then
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install libpython3.5-stdlib
 elif [ "$distver" == "resolute" ]; then
-	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3-setuptools
+	# Resolute ships python3 = 3.14, but Node.js 22.x's configure rejects
+	# anything outside 3.8 – 3.13. Install python3.13 alongside; Node's
+	# configure searches PATH for python3.13 / python3.12 / ... before
+	# falling back to python3, so the auto-discovery picks the right one.
+	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3-setuptools python3.13
 else
 	DEBIAN_FRONTEND=noninteractive chroot $rootfs apt-get -y install python3-distutils
 fi
