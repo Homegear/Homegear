@@ -250,12 +250,35 @@ cat > "$rootfs/build/CreateDebianPackage.sh" <<-'EOF'
 distribution="<DIST>"
 distributionVersion="<DISTVER>"
 architecture="<ARCH>"
-buildthreads="<BUILDTHREADS>"
+total_threads="<BUILDTHREADS>"
 parallel_modules="<PARALLEL_MODULES>"
+# Per-build thread budget passed to debuild as -j${buildthreads}. Outside
+# parallel waves it is the full total_threads (serial builds get the whole
+# machine). Inside a parallel wave it is total_threads divided by the wave's
+# concurrency, so e.g. 20 total threads with 20 parallel modules => 1 thread
+# per debuild.
+buildthreads=$total_threads
+
+# Set buildthreads for an upcoming parallel wave. Concurrency is clamped to
+# parallel_modules so the math always reflects the actual job count in flight.
+_setBuildThreadsForConcurrency() {
+	local concurrency=$1
+	if [ "$concurrency" -gt "$parallel_modules" ]; then
+		concurrency=$parallel_modules
+	fi
+	if [ "$concurrency" -le 1 ] || [ "$total_threads" -le 1 ]; then
+		buildthreads=$total_threads
+	else
+		buildthreads=$(( total_threads / concurrency ))
+		[ "$buildthreads" -lt 1 ] && buildthreads=1
+	fi
+}
 
 # Run a build in the background, but cap concurrent jobs at $parallel_modules.
 # When $parallel_modules <= 1, the call is fully synchronous, preserving the
-# previous serial behaviour.
+# previous serial behaviour. The current $buildthreads is captured by each
+# subshell at fork time, so set it via _setBuildThreadsForConcurrency before
+# starting a wave.
 _runInParallel() {
 	if [ "$parallel_modules" -le 1 ]; then
 		"$@"
@@ -268,13 +291,16 @@ _runInParallel() {
 	"$@" &
 }
 
-# Block until every background build started via _runInParallel has finished.
-# In serial mode this is a no-op.
+# Block until every background build started via _runInParallel has finished,
+# then restore buildthreads to the full total_threads for subsequent serial
+# builds. In serial mode the wait loop is a no-op but the reset still runs.
 _waitAllParallel() {
-	if [ "$parallel_modules" -le 1 ]; then return; fi
-	while [ "$(jobs -rp | wc -l)" -gt 0 ]; do
-		wait -n || exit 1
-	done
+	if [ "$parallel_modules" -gt 1 ]; then
+		while [ "$(jobs -rp | wc -l)" -gt 0 ]; do
+			wait -n || exit 1
+		done
+	fi
+	buildthreads=$total_threads
 }
 
 function createPackage {
@@ -663,7 +689,9 @@ else
 fi
 
 # libhomegear-node and libhomegear-ipc both depend only on libhomegear-base
-# (already installed) and are independent of each other -- build in parallel.
+# (already installed) and are independent of each other -- build in parallel
+# with two concurrent debuilds, splitting total_threads between them.
+_setBuildThreadsForConcurrency 2
 _runInParallel createPackage libhomegear-node $1 libhomegear-node 0
 _runInParallel createPackage libhomegear-ipc $1 libhomegear-ipc 0
 _waitAllParallel
@@ -693,7 +721,9 @@ else
 fi
 
 # All Homegear modules are leaf packages depending only on the already-installed
-# Homegear daemon. They can be built in parallel up to $parallel_modules.
+# Homegear daemon. They can be built in parallel up to $parallel_modules,
+# splitting total_threads across the concurrent debuilds.
+_setBuildThreadsForConcurrency $parallel_modules
 _runInParallel createPackage homegear-nodes-core $1 homegear-nodes-core 0
 _runInParallel createPackage homegear-nodes-ui $1 homegear-nodes-ui 0
 _runInParallel createPackage Homegear-HomeMaticBidCoS $1 homegear-homematicbidcos 0
@@ -744,7 +774,9 @@ if [[ -n $2 ]]; then
 	sed -i '/if (sha256(ipclibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
 	sed -i "/if (ipclibPath.empty()) return false;/aif (sha256(ipclibPath) == \"$sha256\") return true;" homegear-licensing-${1}/src/Licensing.cpp
 
-	# Token-only modules -- also leaf packages, parallelize per parallel_modules.
+	# Token-only modules -- also leaf packages, parallelize per parallel_modules,
+	# splitting total_threads across the concurrent debuilds.
+	_setBuildThreadsForConcurrency $parallel_modules
 	_runInParallel createPackageWithoutAutomake Homegear-AdminUI $1 homegear-adminui
 
 	_runInParallel createPackage homegear-easy-licensing $1 homegear-easy-licensing 1
