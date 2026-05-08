@@ -251,6 +251,31 @@ distribution="<DIST>"
 distributionVersion="<DISTVER>"
 architecture="<ARCH>"
 buildthreads="<BUILDTHREADS>"
+parallel_modules="<PARALLEL_MODULES>"
+
+# Run a build in the background, but cap concurrent jobs at $parallel_modules.
+# When $parallel_modules <= 1, the call is fully synchronous, preserving the
+# previous serial behaviour.
+_runInParallel() {
+	if [ "$parallel_modules" -le 1 ]; then
+		"$@"
+		[ $? -ne 0 ] && exit 1
+		return
+	fi
+	while [ "$(jobs -rp | wc -l)" -ge "$parallel_modules" ]; do
+		wait -n || exit 1
+	done
+	"$@" &
+}
+
+# Block until every background build started via _runInParallel has finished.
+# In serial mode this is a no-op.
+_waitAllParallel() {
+	if [ "$parallel_modules" -le 1 ]; then return; fi
+	while [ "$(jobs -rp | wc -l)" -gt 0 ]; do
+		wait -n || exit 1
+	done
+}
 
 function createPackage {
   echo "Building package ${1}..."
@@ -637,15 +662,17 @@ else
 	exit 1
 fi
 
-createPackage libhomegear-node $1 libhomegear-node 0
+# libhomegear-node and libhomegear-ipc both depend only on libhomegear-base
+# (already installed) and are independent of each other -- build in parallel.
+_runInParallel createPackage libhomegear-node $1 libhomegear-node 0
+_runInParallel createPackage libhomegear-ipc $1 libhomegear-ipc 0
+_waitAllParallel
 if test -f libhomegear-node*.deb; then
 	dpkg -i libhomegear-node*.deb
 else
 	echo "Error building libhomegear-node."
 	exit 1
 fi
-
-createPackage libhomegear-ipc $1 libhomegear-ipc 0
 if test -f libhomegear-ipc*.deb; then
 	dpkg -i libhomegear-ipc*.deb
 else
@@ -665,29 +692,32 @@ else
 	exit 1
 fi
 
-createPackage homegear-nodes-core $1 homegear-nodes-core 0
-createPackage homegear-nodes-ui $1 homegear-nodes-ui 0
-createPackage Homegear-HomeMaticBidCoS $1 homegear-homematicbidcos 0
-createPackage Homegear-HomeMaticWired $1 homegear-homematicwired 0
-createPackage Homegear-Insteon $1 homegear-insteon 0
-createPackage Homegear-MAX $1 homegear-max 0
-createPackage Homegear-PhilipsHue $1 homegear-philipshue 0
-createPackage Homegear-Sonos $1 homegear-sonos 0
-createPackage Homegear-Kodi $1 homegear-kodi 0
-createPackage Homegear-Intertechno $1 homegear-intertechno 0
-createPackage Homegear-Nanoleaf $1 homegear-nanoleaf 0
-createPackage Homegear-CCU $1 homegear-ccu 0
-createPackage Homegear-Velux-KLF200 $1 homegear-velux-klf200 0
-createPackage Homegear-Beckhoff $1 homegear-beckhoff 1
-createPackage Homegear-KNX $1 homegear-knx 1
-createPackage Homegear-EnOcean $1 homegear-enocean 1
-createPackage Homegear-M-Bus $1 homegear-mbus 1
-createPackage homegear-influxdb $1 homegear-influxdb 0
-createPackage homegear-gateway $1 homegear-gateway 0
-createPackage homegear-management $1 homegear-management 0
-createPackageWithoutAutomake homegear-ui $1 homegear-ui
-createPackage binrpc-client $1 binrpc 0
-createPackage mellonbot $1 mellonbot 1
+# All Homegear modules are leaf packages depending only on the already-installed
+# Homegear daemon. They can be built in parallel up to $parallel_modules.
+_runInParallel createPackage homegear-nodes-core $1 homegear-nodes-core 0
+_runInParallel createPackage homegear-nodes-ui $1 homegear-nodes-ui 0
+_runInParallel createPackage Homegear-HomeMaticBidCoS $1 homegear-homematicbidcos 0
+_runInParallel createPackage Homegear-HomeMaticWired $1 homegear-homematicwired 0
+_runInParallel createPackage Homegear-Insteon $1 homegear-insteon 0
+_runInParallel createPackage Homegear-MAX $1 homegear-max 0
+_runInParallel createPackage Homegear-PhilipsHue $1 homegear-philipshue 0
+_runInParallel createPackage Homegear-Sonos $1 homegear-sonos 0
+_runInParallel createPackage Homegear-Kodi $1 homegear-kodi 0
+_runInParallel createPackage Homegear-Intertechno $1 homegear-intertechno 0
+_runInParallel createPackage Homegear-Nanoleaf $1 homegear-nanoleaf 0
+_runInParallel createPackage Homegear-CCU $1 homegear-ccu 0
+_runInParallel createPackage Homegear-Velux-KLF200 $1 homegear-velux-klf200 0
+_runInParallel createPackage Homegear-Beckhoff $1 homegear-beckhoff 1
+_runInParallel createPackage Homegear-KNX $1 homegear-knx 1
+_runInParallel createPackage Homegear-EnOcean $1 homegear-enocean 1
+_runInParallel createPackage Homegear-M-Bus $1 homegear-mbus 1
+_runInParallel createPackage homegear-influxdb $1 homegear-influxdb 0
+_runInParallel createPackage homegear-gateway $1 homegear-gateway 0
+_runInParallel createPackage homegear-management $1 homegear-management 0
+_runInParallel createPackageWithoutAutomake homegear-ui $1 homegear-ui
+_runInParallel createPackage binrpc-client $1 binrpc 0
+_runInParallel createPackage mellonbot $1 mellonbot 1
+_waitAllParallel
 
 if [[ -n $2 ]]; then
 	sha256=`sha256sum /usr/bin/homegear | awk '{print toupper($0)}' | cut -d ' ' -f 1`
@@ -714,19 +744,21 @@ if [[ -n $2 ]]; then
 	sed -i '/if (sha256(ipclibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
 	sed -i "/if (ipclibPath.empty()) return false;/aif (sha256(ipclibPath) == \"$sha256\") return true;" homegear-licensing-${1}/src/Licensing.cpp
 
-	createPackageWithoutAutomake Homegear-AdminUI $1 homegear-adminui
+	# Token-only modules -- also leaf packages, parallelize per parallel_modules.
+	_runInParallel createPackageWithoutAutomake Homegear-AdminUI $1 homegear-adminui
 
-	createPackage homegear-easy-licensing $1 homegear-easy-licensing 1
-	createPackage homegear-licensing $1 homegear-licensing 1
+	_runInParallel createPackage homegear-easy-licensing $1 homegear-easy-licensing 1
+	_runInParallel createPackage homegear-licensing $1 homegear-licensing 1
 
-	createPackage homegear-nodes-extra $1 homegear-nodes-extra 1
-	createPackage homegear-zwave $1 homegear-zwave 1
-	createPackage homegear-zigbee $1 homegear-zigbee 1
-	createPackage homegear-abi $1 homegear-abi 1
-	createPackage homegear-klafs $1 homegear-klafs 1
-	createPackage homegear-webssh $1 homegear-webssh 1
-	createPackage homegear-dc-connector $1 homegear-dc-connector 1
-	createPackage homegear-cloudconnect $1 homegear-cloudconnect 1
+	_runInParallel createPackage homegear-nodes-extra $1 homegear-nodes-extra 1
+	_runInParallel createPackage homegear-zwave $1 homegear-zwave 1
+	_runInParallel createPackage homegear-zigbee $1 homegear-zigbee 1
+	_runInParallel createPackage homegear-abi $1 homegear-abi 1
+	_runInParallel createPackage homegear-klafs $1 homegear-klafs 1
+	_runInParallel createPackage homegear-webssh $1 homegear-webssh 1
+	_runInParallel createPackage homegear-dc-connector $1 homegear-dc-connector 1
+	_runInParallel createPackage homegear-cloudconnect $1 homegear-cloudconnect 1
+	_waitAllParallel
 #	if [[ "$distribution" == "Raspbian" ]] && [[ "$distributionVersion" == "bullseye" ]]; then
 #	  createPackage doorctrl $1 doorctrl 1
 #	  createPackage ltp08-connector $1 ltp08-connector 1
@@ -850,6 +882,11 @@ if [ -n "$HOMEGEARBUILD_THREADS" ]; then
 	sed -i "s/<BUILDTHREADS>/${HOMEGEARBUILD_THREADS}/g" /build/CreateDebianPackage.sh
 else
 	sed -i "s/<BUILDTHREADS>/1/g" /build/CreateDebianPackage.sh
+fi
+if [ -n "$HOMEGEARBUILD_PARALLEL_MODULES" ]; then
+	sed -i "s/<PARALLEL_MODULES>/${HOMEGEARBUILD_PARALLEL_MODULES}/g" /build/CreateDebianPackage.sh
+else
+	sed -i "s/<PARALLEL_MODULES>/1/g" /build/CreateDebianPackage.sh
 fi
 if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$HOMEGEARBUILD_SERVERUSER" || -z "$HOMEGEARBUILD_SERVERPATH" || -z "$HOMEGEARBUILD_SERVERCERT" ]]; then
 	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageStable.sh\" or \"/build/CreateDebianPackageNightly.sh\"."
