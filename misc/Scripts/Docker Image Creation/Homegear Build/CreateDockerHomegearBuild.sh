@@ -251,56 +251,75 @@ distribution="<DIST>"
 distributionVersion="<DISTVER>"
 architecture="<ARCH>"
 total_threads="<BUILDTHREADS>"
-parallel_modules="<PARALLEL_MODULES>"
 # Per-build thread budget passed to debuild as -j${buildthreads}. Outside
 # parallel waves it is the full total_threads (serial builds get the whole
-# machine). Inside a parallel wave it is total_threads divided by the wave's
-# concurrency, so e.g. 20 total threads with 20 parallel modules => 1 thread
-# per debuild.
+# machine). Inside a parallel wave _setBuildThreadsForConcurrency splits
+# total_threads across the expected debuilds; _runInParallel hands the first
+# (total_threads % expected) builds one extra thread so the budget is fully
+# spent. With 19 threads and 2 builds, build 1 gets 10 threads, build 2 gets 9.
 buildthreads=$total_threads
 
-# Set buildthreads for an upcoming parallel wave. Concurrency is clamped to
-# parallel_modules so the math always reflects the actual job count in flight.
+# Per-wave allocation state. Reset by _setBuildThreadsForConcurrency before
+# each wave and consumed by _runInParallel as it forks builds.
+_wave_base_threads=$total_threads
+_wave_remaining=0
+
+# Initialize wave allocation. $1 is the number of debuilds expected in the
+# wave (NOT the concurrency cap) and acts as the divisor for total_threads.
+# With expected > total_threads (more modules than CPU threads) every debuild
+# gets one thread and _runInParallel naturally serializes the overflow once
+# the concurrency cap is hit.
 _setBuildThreadsForConcurrency() {
-	local concurrency=$1
-	if [ "$concurrency" -gt "$parallel_modules" ]; then
-		concurrency=$parallel_modules
-	fi
-	if [ "$concurrency" -le 1 ] || [ "$total_threads" -le 1 ]; then
-		buildthreads=$total_threads
+	local expected=$1
+	if [ "$total_threads" -le 1 ] || [ "$expected" -le 1 ]; then
+		_wave_base_threads=$total_threads
+		_wave_remaining=0
+	elif [ "$total_threads" -le "$expected" ]; then
+		_wave_base_threads=1
+		_wave_remaining=0
 	else
-		buildthreads=$(( total_threads / concurrency ))
-		[ "$buildthreads" -lt 1 ] && buildthreads=1
+		_wave_base_threads=$(( total_threads / expected ))
+		_wave_remaining=$(( total_threads % expected ))
 	fi
 }
 
-# Run a build in the background, but cap concurrent jobs at $parallel_modules.
-# When $parallel_modules <= 1, the call is fully synchronous, preserving the
-# previous serial behaviour. The current $buildthreads is captured by each
-# subshell at fork time, so set it via _setBuildThreadsForConcurrency before
-# starting a wave.
+# Run a build in the background, capping concurrent jobs at $total_threads.
+# Each call consumes one slot from _wave_remaining if any are left, giving
+# that build one extra thread on top of _wave_base_threads. $buildthreads is
+# captured by each subshell at fork time, so it is set right before the fork.
+# When $total_threads <= 1 the call is fully synchronous, preserving serial
+# behaviour for single-threaded build hosts.
 _runInParallel() {
-	if [ "$parallel_modules" -le 1 ]; then
+	if [ "$_wave_remaining" -gt 0 ]; then
+		buildthreads=$(( _wave_base_threads + 1 ))
+		_wave_remaining=$(( _wave_remaining - 1 ))
+	else
+		buildthreads=$_wave_base_threads
+	fi
+	if [ "$total_threads" -le 1 ]; then
 		"$@"
 		[ $? -ne 0 ] && exit 1
 		return
 	fi
-	while [ "$(jobs -rp | wc -l)" -ge "$parallel_modules" ]; do
+	while [ "$(jobs -rp | wc -l)" -ge "$total_threads" ]; do
 		wait -n || exit 1
 	done
 	"$@" &
 }
 
 # Block until every background build started via _runInParallel has finished,
-# then restore buildthreads to the full total_threads for subsequent serial
-# builds. In serial mode the wait loop is a no-op but the reset still runs.
+# then restore buildthreads and wave state to the full total_threads for
+# subsequent serial builds. In serial mode the wait loop is a no-op but the
+# reset still runs.
 _waitAllParallel() {
-	if [ "$parallel_modules" -gt 1 ]; then
+	if [ "$total_threads" -gt 1 ]; then
 		while [ "$(jobs -rp | wc -l)" -gt 0 ]; do
 			wait -n || exit 1
 		done
 	fi
 	buildthreads=$total_threads
+	_wave_base_threads=$total_threads
+	_wave_remaining=0
 }
 
 function createPackage {
@@ -721,9 +740,10 @@ else
 fi
 
 # All Homegear modules are leaf packages depending only on the already-installed
-# Homegear daemon. They can be built in parallel up to $parallel_modules,
-# splitting total_threads across the concurrent debuilds.
-_setBuildThreadsForConcurrency $parallel_modules
+# Homegear daemon. They are built in parallel, capped at total_threads concurrent
+# debuilds. The 23 below MUST match the number of _runInParallel calls in this
+# wave so threads are evenly split across the expected debuilds.
+_setBuildThreadsForConcurrency 23
 _runInParallel createPackage homegear-nodes-core $1 homegear-nodes-core 0
 _runInParallel createPackage homegear-nodes-ui $1 homegear-nodes-ui 0
 _runInParallel createPackage Homegear-HomeMaticBidCoS $1 homegear-homematicbidcos 0
@@ -774,9 +794,10 @@ if [[ -n $2 ]]; then
 	sed -i '/if (sha256(ipclibPath) == /d' homegear-licensing-${1}/src/Licensing.cpp
 	sed -i "/if (ipclibPath.empty()) return false;/aif (sha256(ipclibPath) == \"$sha256\") return true;" homegear-licensing-${1}/src/Licensing.cpp
 
-	# Token-only modules -- also leaf packages, parallelize per parallel_modules,
-	# splitting total_threads across the concurrent debuilds.
-	_setBuildThreadsForConcurrency $parallel_modules
+	# Token-only modules -- also leaf packages, parallelized with threads split
+	# evenly across the expected debuilds. The 11 below MUST match the number
+	# of _runInParallel calls in this wave.
+	_setBuildThreadsForConcurrency 11
 	_runInParallel createPackageWithoutAutomake Homegear-AdminUI $1 homegear-adminui
 
 	_runInParallel createPackage homegear-easy-licensing $1 homegear-easy-licensing 1
@@ -914,11 +935,6 @@ if [ -n "$HOMEGEARBUILD_THREADS" ]; then
 	sed -i "s/<BUILDTHREADS>/${HOMEGEARBUILD_THREADS}/g" /build/CreateDebianPackage.sh
 else
 	sed -i "s/<BUILDTHREADS>/1/g" /build/CreateDebianPackage.sh
-fi
-if [ -n "$HOMEGEARBUILD_PARALLEL_MODULES" ]; then
-	sed -i "s/<PARALLEL_MODULES>/${HOMEGEARBUILD_PARALLEL_MODULES}/g" /build/CreateDebianPackage.sh
-else
-	sed -i "s/<PARALLEL_MODULES>/1/g" /build/CreateDebianPackage.sh
 fi
 if [[ -z "$HOMEGEARBUILD_SERVERNAME" || -z "$HOMEGEARBUILD_SERVERPORT" || -z "$HOMEGEARBUILD_SERVERUSER" || -z "$HOMEGEARBUILD_SERVERPATH" || -z "$HOMEGEARBUILD_SERVERCERT" ]]; then
 	echo "Container setup successful. You can now execute \"/build/CreateDebianPackageStable.sh\" or \"/build/CreateDebianPackageNightly.sh\"."
