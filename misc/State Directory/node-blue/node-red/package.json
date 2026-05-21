@@ -74,7 +74,7 @@
         "passport-oauth2-client-password": "0.1.2",
         "raw-body": "2.4.2",
         "semver": "7.3.5",
-        "tar": "6.1.11",
+        "tar": "6.2.1",
         "tough-cookie": "4.0.0",
         "uglify-js": "3.14.5",
         "uuid": "8.3.2",
